@@ -10,7 +10,8 @@ import {
   type StorageOptions,
   type TokenAmount,
   type TokenIdentifier,
-  type AuthSignature
+  type AuthSignature,
+  type RootData
 } from './types.js'
 import { MockStorageService } from './storage-service.js'
 import {
@@ -19,8 +20,9 @@ import {
   ERC20_ABI,
   PAYMENTS_ADDRESSES,
   PAYMENTS_ABI,
-  SERVICE_CONTRACT_ADDRESSES
+  PDP_SERVICE_CONTRACT_ADDRESSES
 } from './constants.js'
+import { AuthHelper } from './auth.js'
 
 export class Synapse implements ISynapse {
   private readonly _provider: ethers.Provider
@@ -32,6 +34,7 @@ export class Synapse implements ISynapse {
   // Cached contract instances
   private _usdfcContract: ethers.Contract | null = null
   private _paymentsContract: ethers.Contract | null = null
+  private _authHelper: AuthHelper | null = null
 
   // Static constant for USDFC token identifier
   static readonly USDFC = 'USDFC' as const
@@ -406,63 +409,101 @@ export class Synapse implements ISynapse {
   }
 
   /**
-   * Sign operation data for authentication
-   * @param operation - The operation type
-   * @param data - Array of data to be ABI encoded and signed
-   * @returns Signature components
+   * Get auth helper instance (cached)
    */
-  async signOperation (operation: Operation, data: any[]): Promise<AuthSignature> {
-    // Get service contract address
-    const serviceContractAddress = SERVICE_CONTRACT_ADDRESSES[this._network]
-    if (serviceContractAddress === '') {
-      throw this._createError(
-        'signOperation',
-        `Service contract not deployed on ${this._network} network`
-      )
+  private _getAuthHelper (): AuthHelper {
+    if (this._authHelper == null) {
+      const pdpServiceContractAddress = PDP_SERVICE_CONTRACT_ADDRESSES[this._network]
+      if (pdpServiceContractAddress === '') {
+        throw this._createError(
+          '_getAuthHelper',
+          `PDP service contract not deployed on ${this._network} network`
+        )
+      }
+      this._authHelper = new AuthHelper(pdpServiceContractAddress, this._signer)
     }
-
-    // Prepare data for ABI encoding - operation comes after service contract address
-    const encodingData = [serviceContractAddress, operation, ...data]
-
-    // ABI encode the data
-    const abiCoder = ethers.AbiCoder.defaultAbiCoder()
-    const types = this._getTypesForOperation(operation, data.length)
-    const encodedData = abiCoder.encode(types, encodingData)
-
-    // Hash the encoded data
-    const messageHash = ethers.keccak256(encodedData)
-
-    // Sign the hash
-    const signature = await this._signer.signMessage(ethers.getBytes(messageHash))
-
-    // Split signature into components
-    const sig = ethers.Signature.from(signature)
-
-    return {
-      signature,
-      v: sig.v,
-      r: sig.r,
-      s: sig.s,
-      signedData: encodedData
-    }
+    return this._authHelper
   }
 
   /**
-   * Get ABI types for encoding based on operation
+   * Sign CreateProofSet operation
    */
-  private _getTypesForOperation (operation: Operation, dataLength: number): string[] {
-    const baseTypes = ['address', 'uint8'] // serviceContractAddr, opEnum
+  async signCreateProofSet (
+    clientDataSetId: number | bigint,
+    payee: string
+  ): Promise<AuthSignature> {
+    return await this._getAuthHelper().signCreateProofSet(clientDataSetId, payee)
+  }
+
+  /**
+   * Sign AddRoots operation
+   */
+  async signAddRoots (
+    clientDataSetId: number | bigint,
+    firstRootId: number | bigint,
+    rootDataArray: RootData[]
+  ): Promise<AuthSignature> {
+    return await this._getAuthHelper().signAddRoots(clientDataSetId, firstRootId, rootDataArray)
+  }
+
+  /**
+   * Sign ScheduleRemovals operation
+   */
+  async signScheduleRemovals (
+    clientDataSetId: number | bigint,
+    rootIds: Array<number | bigint>
+  ): Promise<AuthSignature> {
+    return await this._getAuthHelper().signScheduleRemovals(clientDataSetId, rootIds)
+  }
+
+  /**
+   * Sign DeleteProofSet operation
+   */
+  async signDeleteProofSet (
+    clientDataSetId: number | bigint
+  ): Promise<AuthSignature> {
+    return await this._getAuthHelper().signDeleteProofSet(clientDataSetId)
+  }
+
+  /**
+   * Get the address of the current signer
+   */
+  async getSignerAddress (): Promise<string> {
+    return await this._signer.getAddress()
+  }
+
+  /**
+   * Legacy method - deprecated in favor of specific sign methods
+   * @deprecated Use signCreateProofSet, signAddRoots, signScheduleRemovals, or signDeleteProofSet instead
+   */
+  async signOperation (operation: Operation, data: any[]): Promise<AuthSignature> {
+    const authHelper = this._getAuthHelper()
 
     switch (operation) {
       case Operation.CreateProofSet:
-        return [...baseTypes, 'uint256'] // clientDataSetId
+        if (data.length !== 2) {
+          throw this._createError('signOperation', 'CreateProofSet requires [clientDataSetId, payee]')
+        }
+        return await authHelper.signCreateProofSet(data[0], data[1])
+
       case Operation.AddRoots:
-        // proofSetId, firstRootId, rootData[]
-        return [...baseTypes, 'uint256', 'uint256', 'tuple(tuple(bytes),uint256)[]']
+        if (data.length !== 3) {
+          throw this._createError('signOperation', 'AddRoots requires [clientDataSetId, firstRootId, rootDataArray]')
+        }
+        return await authHelper.signAddRoots(data[0], data[1], data[2])
+
       case Operation.ScheduleRemovals:
-        return [...baseTypes, 'uint256', 'uint256[]'] // proofSetId, rootIds[]
+        if (data.length !== 2) {
+          throw this._createError('signOperation', 'ScheduleRemovals requires [clientDataSetId, rootIds]')
+        }
+        return await authHelper.signScheduleRemovals(data[0], data[1])
+
       case Operation.DeleteProofSet:
-        return [...baseTypes, 'uint256'] // proofSetId
+        if (data.length !== 1) {
+          throw this._createError('signOperation', 'DeleteProofSet requires [clientDataSetId]')
+        }
+        return await authHelper.signDeleteProofSet(data[0])
+
       default:
         throw this._createError('signOperation', `Unknown operation: ${operation as number}`)
     }

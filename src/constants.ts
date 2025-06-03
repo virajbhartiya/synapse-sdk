@@ -64,10 +64,9 @@ export const RPC_URLS = {
 } as const
 
 /**
- * Service contract addresses (for authentication)
- * TODO: Get actual addresses from deployment
+ * PDP service contract addresses (for authentication)
  */
-export const SERVICE_CONTRACT_ADDRESSES = {
-  mainnet: '', // TODO: Get actual mainnet address
-  calibration: '' // TODO: Get actual calibration address
+export const PDP_SERVICE_CONTRACT_ADDRESSES = {
+  mainnet: '', // TODO: Get actual mainnet address from deployment
+  calibration: '0x2B76E983d30553E7717547230670D4F4F4d813aC'
 } as const

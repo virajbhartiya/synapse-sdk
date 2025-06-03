@@ -138,7 +138,22 @@ export interface Synapse {
   /** Create a storage service instance */
   createStorage: (options?: StorageOptions) => Promise<StorageService>
 
-  /** Sign operation data for authentication */
+  /** Get the address of the current signer */
+  getSignerAddress: () => Promise<string>
+
+  /** Sign CreateProofSet operation */
+  signCreateProofSet: (clientDataSetId: number | bigint, payee: string) => Promise<AuthSignature>
+
+  /** Sign AddRoots operation */
+  signAddRoots: (clientDataSetId: number | bigint, firstRootId: number | bigint, rootDataArray: RootData[]) => Promise<AuthSignature>
+
+  /** Sign ScheduleRemovals operation */
+  signScheduleRemovals: (clientDataSetId: number | bigint, rootIds: Array<number | bigint>) => Promise<AuthSignature>
+
+  /** Sign DeleteProofSet operation */
+  signDeleteProofSet: (clientDataSetId: number | bigint) => Promise<AuthSignature>
+
+  /** Legacy method - sign operation data for authentication */
   signOperation: (operation: Operation, data: any[]) => Promise<AuthSignature>
 }
 
