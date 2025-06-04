@@ -430,9 +430,10 @@ export class Synapse implements ISynapse {
    */
   async signCreateProofSet (
     clientDataSetId: number | bigint,
-    payee: string
+    payee: string,
+    withCDN: boolean = false
   ): Promise<AuthSignature> {
-    return await this._getAuthHelper().signCreateProofSet(clientDataSetId, payee)
+    return await this._getAuthHelper().signCreateProofSet(clientDataSetId, payee, withCDN)
   }
 
   /**
@@ -481,10 +482,10 @@ export class Synapse implements ISynapse {
 
     switch (operation) {
       case Operation.CreateProofSet:
-        if (data.length !== 2) {
-          throw this._createError('signOperation', 'CreateProofSet requires [clientDataSetId, payee]')
+        if (data.length < 2 || data.length > 3) {
+          throw this._createError('signOperation', 'CreateProofSet requires [clientDataSetId, payee] or [clientDataSetId, payee, withCDN]')
         }
-        return await authHelper.signCreateProofSet(data[0], data[1])
+        return await authHelper.signCreateProofSet(data[0], data[1], data[2] ?? false)
 
       case Operation.AddRoots:
         if (data.length !== 3) {
