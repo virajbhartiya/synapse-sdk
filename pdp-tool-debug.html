@@ -81,7 +81,7 @@
         <h2>Configuration</h2>
         <div class="field">
             <label for="recordKeeperAddress">Record Keeper Contract Address (SimplePDPServiceWithPayments):</label>
-            <input type="text" id="recordKeeperAddress" value="0x2A52ad62421F2a600F72dCE2bB98051103cCa589">
+            <input type="text" id="recordKeeperAddress" value="0xD2669f81d5Af503a8C86b9FBF9b80d4572c13c04">
         </div>
         <div class="field">
             <label for="pdpEndpoint">PDP Endpoint URL:</label>
@@ -127,7 +127,8 @@
             "function getProviderIdByAddress(address provider) view returns (uint256)",
             "function getApprovedProvider(uint256 providerId) view returns (tuple(address owner, string pdpUrl, string pieceRetrievalUrl, uint256 registeredAt, uint256 approvedAt))",
             "function proofSetCreated(uint256 proofSetId, address creator, bytes calldata extraData)",
-            "function clientDataSetIDs(address client) view returns (uint256)"
+            "function clientDataSetIDs(address client) view returns (uint256)",
+            "function owner() view returns (address)"
         ];
 
         // ERC20 ABI for USDFC
@@ -232,7 +233,9 @@
                 const usdfc = await contract.usdFcTokenAddress();
                 const payments = await contract.paymentsContractAddress();
                 const fee = await contract.PROOFSET_CREATION_FEE();
+                const owner = await contract.owner();
                 
+                log(`Contract Owner: ${owner}`);
                 log(`PDPVerifier: ${pdpVerifier}`);
                 log(`USDFC Token: ${usdfc}`);
                 log(`Payments Contract: ${payments}`);
@@ -244,6 +247,21 @@
                     log(`WARNING: PDPVerifier mismatch! Expected ${expectedPDPVerifier}`, 'error');
                 } else {
                     log('PDPVerifier matches Curio\'s address ✓', 'success');
+                }
+                
+                // Test if Payments contract is functional
+                log('\nTesting Payments contract functionality...');
+                const paymentsABI = ["function nextRailId() view returns (uint256)"];
+                const paymentsContract = new ethers.Contract(payments, paymentsABI, provider);
+                
+                try {
+                    const nextId = await paymentsContract.nextRailId();
+                    log(`Payments contract is functional! Next Rail ID: ${nextId} ✓`, 'success');
+                } catch (e) {
+                    log('ERROR: Payments contract is NOT functional!', 'error');
+                    log('This is why proof set creation is failing.', 'error');
+                    log('You need to deploy a working Payments contract.', 'error');
+                    debugLog(`Payments error: ${e.message}`);
                 }
                 
             } catch (error) {
@@ -259,36 +277,64 @@
                 const contractAddress = document.getElementById('recordKeeperAddress').value;
                 const userAddress = await signer.getAddress();
                 
-                // Get USDFC token address from contract
+                // Get USDFC token address and payments contract from service contract
                 const usdfcAddress = await contract.usdFcTokenAddress();
+                const paymentsAddress = await contract.paymentsContractAddress();
                 const usdfcToken = new ethers.Contract(usdfcAddress, erc20ABI, signer);
+                
+                log(`Payments contract address: ${paymentsAddress}`);
                 
                 // Check balance
                 const balance = await usdfcToken.balanceOf(userAddress);
                 const decimals = await usdfcToken.decimals();
                 log(`USDFC Balance: ${ethers.formatUnits(balance, decimals)}`);
                 
-                // Check allowance
-                const allowance = await usdfcToken.allowance(userAddress, contractAddress);
-                log(`USDFC Allowance for contract: ${ethers.formatUnits(allowance, decimals)}`);
+                // Check allowance for service contract
+                const serviceAllowance = await usdfcToken.allowance(userAddress, contractAddress);
+                log(`USDFC Allowance for Service contract: ${ethers.formatUnits(serviceAllowance, decimals)}`);
+                
+                // Check allowance for payments contract
+                const paymentsAllowance = await usdfcToken.allowance(userAddress, paymentsAddress);
+                log(`USDFC Allowance for Payments contract: ${ethers.formatUnits(paymentsAllowance, decimals)}`);
                 
                 // Get required fee
                 const fee = await contract.PROOFSET_CREATION_FEE();
                 log(`Required fee: ${ethers.formatUnits(fee, decimals)}`);
                 
-                if (allowance < fee) {
-                    log('Insufficient allowance! Need to approve USDFC spending.', 'error');
-                    
-                    // Offer to approve
-                    if (confirm('Would you like to approve USDFC spending now?')) {
-                        log('Approving USDFC...');
-                        const tx = await usdfcToken.approve(contractAddress, ethers.parseUnits('10', decimals)); // Approve 10 USDFC
-                        log(`Approval transaction sent: ${tx.hash}`);
-                        await tx.wait();
-                        log('Approval confirmed!', 'success');
-                    }
+                let needsApproval = false;
+                
+                if (serviceAllowance < fee) {
+                    log('Insufficient allowance for Service contract!', 'error');
+                    needsApproval = true;
                 } else {
-                    log('Sufficient allowance ✓', 'success');
+                    log('Service contract allowance sufficient ✓', 'success');
+                }
+                
+                // Note: The payments contract might also need allowance
+                if (paymentsAllowance === 0n) {
+                    log('WARNING: No allowance for Payments contract!', 'error');
+                    log('The Payments contract may need USDFC allowance for rail creation', 'error');
+                }
+                
+                if (needsApproval || paymentsAllowance === 0n) {
+                    // Offer to approve both
+                    if (confirm('Would you like to approve USDFC spending for both contracts?')) {
+                        if (serviceAllowance < fee) {
+                            log('Approving USDFC for Service contract...');
+                            const tx1 = await usdfcToken.approve(contractAddress, ethers.parseUnits('10', decimals));
+                            log(`Service approval tx: ${tx1.hash}`);
+                            await tx1.wait();
+                            log('Service contract approved!', 'success');
+                        }
+                        
+                        if (paymentsAllowance === 0n) {
+                            log('Approving USDFC for Payments contract...');
+                            const tx2 = await usdfcToken.approve(paymentsAddress, ethers.parseUnits('10', decimals));
+                            log(`Payments approval tx: ${tx2.hash}`);
+                            await tx2.wait();
+                            log('Payments contract approved!', 'success');
+                        }
+                    }
                 }
                 
             } catch (error) {
@@ -422,6 +468,15 @@
                 // Prepare the extraData as the contract expects it
                 const abiCoder = new ethers.AbiCoder();
                 const metadata = "Test proof set from debug page";
+                
+                // Debug: Show what we're encoding
+                debugLog(`\nExtraData components:`);
+                debugLog(`  metadata: "${metadata}"`);
+                debugLog(`  payer (client): ${clientAddress}`);
+                debugLog(`  withCDN: ${withCDN}`);
+                debugLog(`  payee (storage provider): ${storageProvider}`);
+                debugLog(`  signature: ${signature.substring(0, 66)}...`);
+                
                 const extraData = abiCoder.encode(
                     ["string", "address", "bool", "bytes"],
                     [metadata, clientAddress, withCDN, signature]
@@ -433,7 +488,22 @@
                     extraData: extraData
                 };
 
-                debugLog(`Request data: ${JSON.stringify(requestData, null, 2)}`);
+                debugLog(`\nRequest data: ${JSON.stringify(requestData, null, 2)}`);
+                
+                // Decode extraData to verify
+                try {
+                    const decoded = abiCoder.decode(
+                        ["string", "address", "bool", "bytes"],
+                        extraData
+                    );
+                    debugLog(`\nDecoded extraData verification:`);
+                    debugLog(`  metadata: "${decoded[0]}"`);
+                    debugLog(`  payer: ${decoded[1]}`);
+                    debugLog(`  withCDN: ${decoded[2]}`);
+                    debugLog(`  signature length: ${decoded[3].length} chars (${decoded[3].length/2} bytes)`);
+                } catch (e) {
+                    debugLog(`Error decoding extraData: ${e.message}`);
+                }
 
                 // Send the request
                 const response = await fetch(`${pdpEndpoint}/pdp/proof-sets`, {
