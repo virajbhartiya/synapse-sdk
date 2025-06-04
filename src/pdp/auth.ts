@@ -166,8 +166,17 @@ export class PDPAuthHelper {
     firstRootId: number | bigint,
     rootDataArray: RootData[]
   ): Promise<AuthSignature> {
-    // Convert rootData to EIP-712 format
-    const rootData = rootDataArray.map(root => {
+    // Manual hash calculation to match Solidity exactly
+    // ethers.js TypedDataEncoder doesn't handle dynamic arrays correctly for our use case
+
+    // Step 1: Calculate type hashes
+    const cidTypeHash = ethers.keccak256(ethers.toUtf8Bytes('Cid(bytes data)'))
+    const rootDataTypeHash = ethers.keccak256(ethers.toUtf8Bytes('RootData(Cid root,uint256 rawSize)Cid(bytes data)'))
+    const addRootsTypeHash = ethers.keccak256(ethers.toUtf8Bytes('AddRoots(uint256 clientDataSetId,uint256 firstAdded,RootData[] rootData)RootData(Cid root,uint256 rawSize)Cid(bytes data)'))
+
+    // Step 2: Calculate individual RootData hashes (mimicking Solidity exactly)
+    const rootDataHashes = []
+    for (const root of rootDataArray) {
       const commP = typeof root.cid === 'string' ? asCommP(root.cid) : root.cid
       if (commP == null) {
         throw new Error(`Invalid CommP: ${String(root.cid)}`)
@@ -178,42 +187,60 @@ export class PDPAuthHelper {
         throw new Error(`Expected 32-byte digest, got ${digest.length} bytes`)
       }
 
-      return {
-        root: {
-          data: digest // Just the 32-byte digest for Cid struct
-        },
-        rawSize: BigInt(root.rawSize)
-      }
-    })
+      // Hash the data first: keccak256(rootDataArray[i].root.data)
+      const cidDataHash = ethers.keccak256(digest)
 
-    const value = {
-      clientDataSetId: BigInt(clientDataSetId),
-      firstAdded: BigInt(firstRootId),
-      rootData
+      // Hash the Cid struct: keccak256(abi.encode(CID_TYPEHASH, keccak256(data)))
+      const cidStructHash = ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(
+        ['bytes32', 'bytes32'],
+        [cidTypeHash, cidDataHash]
+      ))
+
+      // Hash the RootData struct: keccak256(abi.encode(ROOTDATA_TYPEHASH, cidStructHash, rawSize))
+      const rootDataStructHash = ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(
+        ['bytes32', 'bytes32', 'uint256'],
+        [rootDataTypeHash, cidStructHash, BigInt(root.rawSize)]
+      ))
+
+      rootDataHashes.push(rootDataStructHash)
     }
 
-    const signature = await this.signer.signTypedData(
-      this.domain,
-      {
-        Cid: EIP712_TYPES.Cid,
-        RootData: EIP712_TYPES.RootData,
-        AddRoots: EIP712_TYPES.AddRoots
-      },
-      value
-    )
+    // Step 3: Calculate array hash using correct Solidity encoding
+    // This matches Solidity's abi.encode(rootDataHashes)
+    const arrayHash = ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(
+      ['bytes32[]'],
+      [rootDataHashes]
+    ))
 
-    const sig = ethers.Signature.from(signature)
+    // Step 4: Calculate final struct hash
+    const structHash = ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(
+      ['bytes32', 'uint256', 'uint256', 'bytes32'],
+      [addRootsTypeHash, BigInt(clientDataSetId), BigInt(firstRootId), arrayHash]
+    ))
 
-    // For EIP-712, signedData contains the actual message hash that was signed
-    const signedData = ethers.TypedDataEncoder.hash(
-      this.domain,
-      {
-        Cid: EIP712_TYPES.Cid,
-        RootData: EIP712_TYPES.RootData,
-        AddRoots: EIP712_TYPES.AddRoots
-      },
-      value
-    )
+    // Step 5: Calculate domain separator and final hash
+    const domainSeparator = ethers.TypedDataEncoder.hashDomain(this.domain)
+    const signedData = ethers.keccak256(ethers.concat([
+      '0x1901',
+      domainSeparator,
+      structHash
+    ]))
+
+    // Step 6: Sign the hash directly (no message prefix)
+    // For EIP-712, we need to sign the raw hash without the Ethereum message prefix
+    let signature: string
+    let sig: ethers.Signature
+
+    if ('signingKey' in this.signer && this.signer.signingKey != null) {
+      // Direct access to signing key (Wallet)
+      const signingKey = this.signer.signingKey as any
+      sig = signingKey.sign(signedData)
+      signature = sig.serialized
+    } else {
+      // For other signers (like browser providers), we need to fall back to a different approach
+      // This is a limitation where we can't easily get raw hash signatures
+      throw new Error('AddRoots signature generation requires a Wallet with direct private key access. Browser providers and external signers are not currently supported for this operation.')
+    }
 
     return {
       signature,
