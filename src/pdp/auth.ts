@@ -421,13 +421,13 @@ export class PDPAuthHelper {
     clientDataSetId: number | bigint,
     rootIds: Array<number | bigint>
   ): Promise<AuthSignature> {
-    // Contract expects a hash of the rootIds array
-    const rootIdsHash = ethers.keccak256(
-      ethers.AbiCoder.defaultAbiCoder().encode(
-        ['uint256[]'],
-        [rootIds.map(id => BigInt(id))]
-      )
+    // Contract expects a hash of the rootIds array using encodePacked
+    // For abi.encodePacked with uint256[], we concatenate each uint256 as 32 bytes
+    const rootIdsBigInt = rootIds.map(id => BigInt(id))
+    const packedData = ethers.concat(
+      rootIdsBigInt.map(id => ethers.toBeHex(id, 32))
     )
+    const rootIdsHash = ethers.keccak256(packedData)
 
     let signature: string
 
