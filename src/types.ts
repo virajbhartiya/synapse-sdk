@@ -139,11 +139,8 @@ export interface Synapse {
   /** Create a storage service instance */
   createStorage: (options?: StorageOptions) => Promise<StorageService>
 
-  /** Get the address of the current signer */
-  getSignerAddress: () => Promise<string>
-
   /** Get PDPAuthHelper instance for signing operations */
-  getPDPAuthHelper: (contractAddress?: string) => PDPAuthHelper
+  getPDPAuthHelper: () => PDPAuthHelper
 }
 
 /**
