@@ -329,6 +329,21 @@ const formattedRootData = rootDataArray.map(root => [
 - **MetaMask Signatures**: Browser wallets add Ethereum message prefix automatically
 - **Contract Support**: Contracts can verify both raw and prefixed signatures
 
+### Critical Discovery: AddRoots EIP-712 Encoding Issue
+**IMPORTANT**: The AddRoots signature required manual implementation due to ethers.js incompatibility with Solidity's ABI encoding for dynamic arrays.
+
+**Root Cause**: `ethers.TypedDataEncoder` doesn't properly encode `RootData[]` arrays the same way as Solidity's `abi.encode()`:
+- TypeScript (ethers): Uses spread array encoding that produces packed concatenation
+- Solidity: Uses proper ABI encoding with length prefix and offset information
+
+**Solution**: Manual EIP-712 hash calculation that exactly replicates Solidity's algorithm:
+1. Calculate type hashes manually instead of relying on ethers
+2. Hash each RootData struct step-by-step (Cid → RootData → array element)
+3. Use `ethers.AbiCoder.defaultAbiCoder().encode(['bytes32[]'], [hashes])` for array encoding
+4. Sign the final EIP-712 digest directly with the wallet's private key
+
+**Limitation**: AddRoots signatures only work with `ethers.Wallet` (private key access required), not browser providers or external signers.
+
 ### Testing Strategy
 - **Cross-Boundary Testing**: Tests verify TypeScript signatures against Solidity-generated references
 - **Forge Integration**: Uses `SignatureFixtureTest.t.sol` to generate reference signatures
@@ -340,6 +355,7 @@ const formattedRootData = rootDataArray.map(root => [
 2. **CommP Confusion**: Using full CID bytes instead of extracted 32-byte digest
 3. **Signature Components**: Assuming `r` component format without proper testing
 4. **Contract Address**: Signatures are tied to specific contract addresses
+5. **Array Encoding**: ethers.js TypedDataEncoder doesn't match Solidity for dynamic arrays
 
 ### AuthHelper Usage
 ```typescript
