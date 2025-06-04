@@ -146,13 +146,14 @@
 
     <div class="container">
         <h2>1. Create Proof Set</h2>
+        <p style="color: #666; font-size: 14px;">MetaMask will display structured data: clientDataSetId, payee address, and withCDN flag</p>
         <div class="form-group">
             <label for="createClientDataSetId">Client Data Set ID:</label>
-            <input type="text" id="createClientDataSetId" placeholder="my-dataset-123">
+            <input type="text" id="createClientDataSetId" placeholder="12345" value="12345">
         </div>
         <div class="form-group">
             <label for="createPayee">Payee Address:</label>
-            <input type="text" id="createPayee" placeholder="0x...">
+            <input type="text" id="createPayee" placeholder="0x..." value="0x70997970C51812dc3A010C7d01b50e0d17dc79C8">
         </div>
         <div class="form-group">
             <label>
@@ -166,16 +167,16 @@
 
     <div class="container">
         <h2>2. Add Roots</h2>
-        <div class="error" style="margin-bottom: 15px;">
-            <strong>Note:</strong> AddRoots signatures currently only work with private key wallets (not MetaMask or hardware wallets) due to EIP-712 encoding complexities.
+        <div class="info" style="margin-bottom: 15px;">
+            <strong>Note:</strong> AddRoots signatures work with MetaMask but will show a hex warning due to dynamic array encoding limitations in ethers.js. This is expected behavior.
         </div>
         <div class="form-group">
             <label for="addClientDataSetId">Client Data Set ID:</label>
-            <input type="text" id="addClientDataSetId" placeholder="my-dataset-123">
+            <input type="text" id="addClientDataSetId" placeholder="12345" value="12345">
         </div>
         <div class="form-group">
             <label for="addFirstRootId">First Root ID:</label>
-            <input type="number" id="addFirstRootId" placeholder="0">
+            <input type="number" id="addFirstRootId" placeholder="1" value="1">
         </div>
         <div id="rootsContainer">
             <h3>Root Data Entries</h3>
@@ -188,13 +189,14 @@
 
     <div class="container">
         <h2>3. Schedule Removals</h2>
+        <p style="color: #666; font-size: 14px;">MetaMask will display structured data: clientDataSetId and rootIdsHash</p>
         <div class="form-group">
             <label for="removeClientDataSetId">Client Data Set ID:</label>
-            <input type="text" id="removeClientDataSetId" placeholder="my-dataset-123">
+            <input type="text" id="removeClientDataSetId" placeholder="12345" value="12345">
         </div>
         <div class="form-group">
             <label for="removeRootIds">Root IDs (comma-separated):</label>
-            <input type="text" id="removeRootIds" placeholder="0,1,2">
+            <input type="text" id="removeRootIds" placeholder="1,3,5" value="1,3,5">
         </div>
         <button id="signScheduleRemovals">Sign Schedule Removals</button>
         <div id="scheduleRemovalsResult"></div>
@@ -202,9 +204,10 @@
 
     <div class="container">
         <h2>4. Delete Proof Set</h2>
+        <p style="color: #666; font-size: 14px;">MetaMask will display structured data: clientDataSetId</p>
         <div class="form-group">
             <label for="deleteClientDataSetId">Client Data Set ID:</label>
-            <input type="text" id="deleteClientDataSetId" placeholder="my-dataset-123">
+            <input type="text" id="deleteClientDataSetId" placeholder="12345" value="12345">
         </div>
         <button id="signDeleteProofSet">Sign Delete Proof Set</button>
         <div id="deleteProofSetResult"></div>
@@ -264,14 +267,16 @@
                 document.getElementById('accountInfo').innerHTML = `
                     <div class="info" style="margin-top: 10px;">
                         <strong>Account:</strong> ${address}<br>
-                        <strong>Chain ID:</strong> ${network.chainId}
+                        <strong>Chain ID:</strong> ${network.chainId}<br>
+                        <strong>Note:</strong> EIP-712 signatures will show structured data in MetaMask!
                     </div>
                 `;
                 
-                // Initialize AuthHelper
+                // Initialize AuthHelper with the correct chain ID
                 const contractAddress = document.getElementById('contractAddress').value;
+                const selectedNetwork = document.getElementById('network').value;
                 if (contractAddress) {
-                    authHelper = new SynapseSDK.PDPAuthHelper(contractAddress, signer);
+                    authHelper = new SynapseSDK.PDPAuthHelper(contractAddress, signer, BigInt(selectedNetwork));
                 }
             } catch (error) {
                 showError('status', 'Failed to connect: ' + error.message);
@@ -282,8 +287,9 @@
         document.getElementById('contractAddress').addEventListener('change', () => {
             if (signer) {
                 const contractAddress = document.getElementById('contractAddress').value;
+                const selectedNetwork = document.getElementById('network').value;
                 if (contractAddress) {
-                    authHelper = new SynapseSDK.PDPAuthHelper(contractAddress, signer);
+                    authHelper = new SynapseSDK.PDPAuthHelper(contractAddress, signer, BigInt(selectedNetwork));
                 }
             }
         });
@@ -298,9 +304,9 @@
             entry.innerHTML = `
                 <div class="form-group">
                     <label>Root ${index + 1} - CommP CID:</label>
-                    <input type="text" id="rootCid${index}" placeholder="baga6ea4seaqao7s73y24kcutaosvacpdjgfe5pw76ooefnyqw4ynr3d2y6x2mpq" style="margin-bottom: 10px;">
+                    <input type="text" id="rootCid${index}" placeholder="baga6ea4seaqao7s73y24kcutaosvacpdjgfe5pw76ooefnyqw4ynr3d2y6x2mpq" value="${index === 0 ? 'baga6ea4seaqpy7usqklokfx2vxuynmupslkeutzexe2uqurdg5vhtebhxqmpqmy' : ''}" style="margin-bottom: 10px;">
                     <label>Raw Size:</label>
-                    <input type="number" id="rootSize${index}" placeholder="1024">
+                    <input type="number" id="rootSize${index}" placeholder="1024" value="${index === 0 ? '1024' : ''}">
                 </div>
             `;
             
@@ -318,16 +324,19 @@
                     return;
                 }
 
-                const clientDataSetId = document.getElementById('createClientDataSetId').value;
+                const clientDataSetIdStr = document.getElementById('createClientDataSetId').value;
                 const payee = document.getElementById('createPayee').value;
                 const withCDN = document.getElementById('createWithCDN').checked;
 
-                if (!clientDataSetId || !payee) {
+                if (!clientDataSetIdStr || !payee) {
                     showError('createProofSetResult', 'Please fill in all fields');
                     return;
                 }
 
-                showInfo('createProofSetResult', 'Signing...');
+                // Convert to number if it looks like a number, otherwise use string
+                const clientDataSetId = /^\d+$/.test(clientDataSetIdStr) ? BigInt(clientDataSetIdStr) : clientDataSetIdStr;
+
+                showInfo('createProofSetResult', 'Signing... Check MetaMask for structured data!');
                 
                 const result = await authHelper.signCreateProofSet(clientDataSetId, payee, withCDN);
                 
@@ -345,13 +354,16 @@
                     return;
                 }
 
-                const clientDataSetId = document.getElementById('addClientDataSetId').value;
+                const clientDataSetIdStr = document.getElementById('addClientDataSetId').value;
                 const firstRootId = document.getElementById('addFirstRootId').value;
 
-                if (!clientDataSetId || !firstRootId) {
+                if (!clientDataSetIdStr || !firstRootId) {
                     showError('addRootsResult', 'Please fill in client data set ID and first root ID');
                     return;
                 }
+
+                // Convert to number if it looks like a number, otherwise use string
+                const clientDataSetId = /^\d+$/.test(clientDataSetIdStr) ? BigInt(clientDataSetIdStr) : clientDataSetIdStr;
 
                 // Collect root data
                 const rootDataArray = [];
@@ -372,7 +384,7 @@
                     return;
                 }
 
-                showInfo('addRootsResult', 'Signing...');
+                showInfo('addRootsResult', 'Signing... MetaMask will show a hex warning - this is expected!');
                 
                 const result = await authHelper.signAddRoots(
                     clientDataSetId,
@@ -394,17 +406,19 @@
                     return;
                 }
 
-                const clientDataSetId = document.getElementById('removeClientDataSetId').value;
+                const clientDataSetIdStr = document.getElementById('removeClientDataSetId').value;
                 const rootIdsStr = document.getElementById('removeRootIds').value;
 
-                if (!clientDataSetId || !rootIdsStr) {
+                if (!clientDataSetIdStr || !rootIdsStr) {
                     showError('scheduleRemovalsResult', 'Please fill in all fields');
                     return;
                 }
 
+                // Convert to number if it looks like a number, otherwise use string
+                const clientDataSetId = /^\d+$/.test(clientDataSetIdStr) ? BigInt(clientDataSetIdStr) : clientDataSetIdStr;
                 const rootIds = rootIdsStr.split(',').map(id => BigInt(id.trim()));
 
-                showInfo('scheduleRemovalsResult', 'Signing...');
+                showInfo('scheduleRemovalsResult', 'Signing... Check MetaMask for structured data!');
                 
                 const result = await authHelper.signScheduleRemovals(clientDataSetId, rootIds);
                 
@@ -422,14 +436,17 @@
                     return;
                 }
 
-                const clientDataSetId = document.getElementById('deleteClientDataSetId').value;
+                const clientDataSetIdStr = document.getElementById('deleteClientDataSetId').value;
 
-                if (!clientDataSetId) {
+                if (!clientDataSetIdStr) {
                     showError('deleteProofSetResult', 'Please fill in client data set ID');
                     return;
                 }
 
-                showInfo('deleteProofSetResult', 'Signing...');
+                // Convert to number if it looks like a number, otherwise use string
+                const clientDataSetId = /^\d+$/.test(clientDataSetIdStr) ? BigInt(clientDataSetIdStr) : clientDataSetIdStr;
+
+                showInfo('deleteProofSetResult', 'Signing... Check MetaMask for structured data!');
                 
                 const result = await authHelper.signDeleteProofSet(clientDataSetId);
                 
