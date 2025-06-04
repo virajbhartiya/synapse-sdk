@@ -22,19 +22,22 @@ export class AuthHelper {
    * Sign CreateProofSet operation
    * @param clientDataSetId - Unique dataset ID for the client
    * @param payee - Storage provider address receiving payment
+   * @param withCDN - Whether CDN service is enabled
    */
   async signCreateProofSet (
     clientDataSetId: number | bigint,
-    payee: string
+    payee: string,
+    withCDN: boolean = false
   ): Promise<AuthSignature> {
     const data = [
       this.serviceContractAddress, // address
       Operation.CreateProofSet, // uint8
       BigInt(clientDataSetId), // uint256
+      withCDN, // bool
       payee // address
     ]
 
-    const types = ['address', 'uint8', 'uint256', 'address']
+    const types = ['address', 'uint8', 'uint256', 'bool', 'address']
     return await this._signData(data, types)
   }
 
@@ -56,10 +59,16 @@ export class AuthHelper {
         throw new Error(`Invalid CommP: ${String(root.cid)}`)
       }
 
-      // Contract expects tuple(tuple(bytes), uint256) format
-      // where the inner tuple(bytes) represents the CID
+      // Contract expects PDPVerifier.RootData[] which is tuple(bytes32,uint256)[]
+      // We need to extract just the 32-byte digest from the CommP multihash
+      // The multihash digest is the actual piece commitment root
+      const digest = commP.multihash.digest
+      if (digest.length !== 32) {
+        throw new Error(`Expected 32-byte digest, got ${digest.length} bytes`)
+      }
+
       return [
-        [commP.bytes], // tuple(bytes) - CID as bytes
+        digest, // bytes32 - just the 32-byte digest
         BigInt(root.rawSize) // uint256 - raw size
       ]
     })
@@ -69,10 +78,10 @@ export class AuthHelper {
       Operation.AddRoots, // uint8
       BigInt(clientDataSetId), // uint256
       BigInt(firstRootId), // uint256
-      formattedRootData // tuple(tuple(bytes),uint256)[]
+      formattedRootData // tuple(bytes32,uint256)[]
     ]
 
-    const types = ['address', 'uint8', 'uint256', 'uint256', 'tuple(tuple(bytes),uint256)[]']
+    const types = ['address', 'uint8', 'uint256', 'uint256', 'tuple(bytes32,uint256)[]']
     return await this._signData(data, types)
   }
 
@@ -124,8 +133,38 @@ export class AuthHelper {
     // Hash the encoded data with keccak256
     const messageHash = ethers.keccak256(encodedData)
 
-    // Sign the hash (ethers handles the message prefix internally)
-    const signature = await this.signer.signMessage(ethers.getBytes(messageHash))
+    // Sign the hash directly (without Ethereum message prefix)
+    // The contract expects the raw hash to be signed, not a prefixed message
+    let signature: string
+
+    // Try to access private key for raw signing (no Ethereum message prefix)
+    let privateKey: string | null = null
+
+    // Check various paths where private key might be stored
+    const signerAny = this.signer as any
+    if (signerAny.privateKey != null) {
+      privateKey = signerAny.privateKey
+    } else if (signerAny._signingKey?.privateKey != null) {
+      privateKey = signerAny._signingKey.privateKey
+    } else if (signerAny.signer?.privateKey != null) {
+      // NonceManager wraps the actual wallet
+      privateKey = signerAny.signer.privateKey
+    } else if (signerAny.signer?._signingKey?.privateKey != null) {
+      privateKey = signerAny.signer._signingKey.privateKey
+    }
+
+    if (privateKey != null) {
+      // Use raw signing without Ethereum message prefix
+      const signingKey = new ethers.SigningKey(privateKey)
+      const sig = signingKey.sign(messageHash)
+      signature = sig.serialized
+    } else {
+      // For external signers (MetaMask, etc.), we have to use signMessage
+      // which will add the Ethereum message prefix. The contract needs
+      // to account for this when verifying external wallet signatures.
+      // See https://github.com/FilOzone/filecoin-services/issues/26
+      signature = await this.signer.signMessage(ethers.getBytes(messageHash))
+    }
 
     // Split signature into components
     const sig = ethers.Signature.from(signature)
