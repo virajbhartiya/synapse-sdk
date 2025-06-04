@@ -29,6 +29,7 @@ Note: `ethers` v6 is a peer dependency and must be installed separately.
   * [API Reference](#api-reference)
 * [Using Individual Components](#using-individual-components)
   * [CommP Utilities](#commp-utilities)
+  * [PDP Auth Helper](#pdp-auth-helper)
   * [PDP Upload Service](#pdp-upload-service)
   * [PDP Download Service](#pdp-download-service)
   * [Storage Service (Mock)](#storage-service-mock)
@@ -124,7 +125,7 @@ interface SynapseOptions {
 - `deposit(amount, token?)` - Deposit funds to payments contract
 - `withdraw(amount, token?)` - Withdraw funds from payments contract
 - `createStorage(options?)` - Create a storage service instance
-- `signOperation(operation, data)` - Sign data for on-chain authentication
+- `getPDPAuthHelper()` - Get auth helper for signing PDP operations
 
 ---
 
@@ -153,6 +154,45 @@ if (commp !== null) {
 // Stream-based CommP calculation; compatible with Web Streams API
 const { stream, getCommP } = createCommPStream()
 // Pipe data through stream, then call getCommP() for result
+```
+
+### PDP Auth Helper
+
+Sign EIP-712 typed data for PDP operations. Compatible with MetaMask and other browser wallets.
+
+```javascript
+import { PDPAuthHelper } from '@filoz/synapse-sdk/pdp'
+
+// Create auth helper directly
+const authHelper = new PDPAuthHelper(contractAddress, signer, chainId)
+
+// Or get from Synapse instance (uses network's default contract)
+const synapse = await Synapse.create({ privateKey, rpcURL })
+const authHelper = synapse.getPDPAuthHelper()
+
+// Sign operations
+const createProofSetSig = await authHelper.signCreateProofSet(
+  clientDataSetId,    // number
+  payeeAddress,       // string
+  withCDN            // boolean
+)
+
+const addRootsSig = await authHelper.signAddRoots(
+  clientDataSetId,    // number
+  firstRootId,        // number
+  rootDataArray       // Array of { cid: string | CommP, rawSize: number }
+)
+
+const scheduleRemovalsSig = await authHelper.signScheduleRemovals(
+  clientDataSetId,    // number
+  rootIds             // Array of numbers
+)
+
+const deleteProofSetSig = await authHelper.signDeleteProofSet(
+  clientDataSetId     // number
+)
+
+// All signatures return { signature, v, r, s, signedData }
 ```
 
 ### PDP Upload Service
