@@ -4,14 +4,11 @@
 
 import { ethers } from 'ethers'
 import {
-  Operation,
   type Synapse as ISynapse,
   type SynapseOptions,
   type StorageOptions,
   type TokenAmount,
-  type TokenIdentifier,
-  type AuthSignature,
-  type RootData
+  type TokenIdentifier
 } from './types.js'
 import { MockStorageService } from './storage-service.js'
 import {
@@ -22,7 +19,7 @@ import {
   PAYMENTS_ABI,
   PDP_SERVICE_CONTRACT_ADDRESSES
 } from './constants.js'
-import { AuthHelper } from './auth.js'
+import { PDPAuthHelper } from './pdp/index.js'
 
 export class Synapse implements ISynapse {
   private readonly _provider: ethers.Provider
@@ -34,7 +31,7 @@ export class Synapse implements ISynapse {
   // Cached contract instances
   private _usdfcContract: ethers.Contract | null = null
   private _paymentsContract: ethers.Contract | null = null
-  private _authHelper: AuthHelper | null = null
+  private _pdpAuthHelper: PDPAuthHelper | null = null
 
   // Static constant for USDFC token identifier
   static readonly USDFC = 'USDFC' as const
@@ -409,61 +406,38 @@ export class Synapse implements ISynapse {
   }
 
   /**
-   * Get auth helper instance (cached)
+   * Get auth helper instance for signing PDP operations
+   *
+   * The PDPAuthHelper provides methods to sign various PDP operations like creating
+   * proof sets, adding roots, scheduling removals, and deleting proof sets.
+   * The instance is cached for performance.
+   *
+   * @returns PDPAuthHelper instance for signing operations
+   * @example
+   * ```typescript
+   * const synapse = await Synapse.create({ privateKey, rpcURL })
+   * const auth = synapse.getPDPAuthHelper()
+   *
+   * // Sign a proof set creation
+   * const signature = await auth.signCreateProofSet(
+   *   clientDataSetId,
+   *   payeeAddress,
+   *   withCDN
+   * )
+   * ```
    */
-  private _getAuthHelper (): AuthHelper {
-    if (this._authHelper == null) {
+  getPDPAuthHelper (): PDPAuthHelper {
+    if (this._pdpAuthHelper == null) {
       const pdpServiceContractAddress = PDP_SERVICE_CONTRACT_ADDRESSES[this._network]
       if (pdpServiceContractAddress === '') {
         throw this._createError(
-          '_getAuthHelper',
+          'getPDPAuthHelper',
           `PDP service contract not deployed on ${this._network} network`
         )
       }
-      this._authHelper = new AuthHelper(pdpServiceContractAddress, this._signer)
+      this._pdpAuthHelper = new PDPAuthHelper(pdpServiceContractAddress, this._signer)
     }
-    return this._authHelper
-  }
-
-  /**
-   * Sign CreateProofSet operation
-   */
-  async signCreateProofSet (
-    clientDataSetId: number | bigint,
-    payee: string,
-    withCDN: boolean = false
-  ): Promise<AuthSignature> {
-    return await this._getAuthHelper().signCreateProofSet(clientDataSetId, payee, withCDN)
-  }
-
-  /**
-   * Sign AddRoots operation
-   */
-  async signAddRoots (
-    clientDataSetId: number | bigint,
-    firstRootId: number | bigint,
-    rootDataArray: RootData[]
-  ): Promise<AuthSignature> {
-    return await this._getAuthHelper().signAddRoots(clientDataSetId, firstRootId, rootDataArray)
-  }
-
-  /**
-   * Sign ScheduleRemovals operation
-   */
-  async signScheduleRemovals (
-    clientDataSetId: number | bigint,
-    rootIds: Array<number | bigint>
-  ): Promise<AuthSignature> {
-    return await this._getAuthHelper().signScheduleRemovals(clientDataSetId, rootIds)
-  }
-
-  /**
-   * Sign DeleteProofSet operation
-   */
-  async signDeleteProofSet (
-    clientDataSetId: number | bigint
-  ): Promise<AuthSignature> {
-    return await this._getAuthHelper().signDeleteProofSet(clientDataSetId)
+    return this._pdpAuthHelper
   }
 
   /**
@@ -471,43 +445,6 @@ export class Synapse implements ISynapse {
    */
   async getSignerAddress (): Promise<string> {
     return await this._signer.getAddress()
-  }
-
-  /**
-   * Legacy method - deprecated in favor of specific sign methods
-   * @deprecated Use signCreateProofSet, signAddRoots, signScheduleRemovals, or signDeleteProofSet instead
-   */
-  async signOperation (operation: Operation, data: any[]): Promise<AuthSignature> {
-    const authHelper = this._getAuthHelper()
-
-    switch (operation) {
-      case Operation.CreateProofSet:
-        if (data.length < 2 || data.length > 3) {
-          throw this._createError('signOperation', 'CreateProofSet requires [clientDataSetId, payee] or [clientDataSetId, payee, withCDN]')
-        }
-        return await authHelper.signCreateProofSet(data[0], data[1], data[2] ?? false)
-
-      case Operation.AddRoots:
-        if (data.length !== 3) {
-          throw this._createError('signOperation', 'AddRoots requires [clientDataSetId, firstRootId, rootDataArray]')
-        }
-        return await authHelper.signAddRoots(data[0], data[1], data[2])
-
-      case Operation.ScheduleRemovals:
-        if (data.length !== 2) {
-          throw this._createError('signOperation', 'ScheduleRemovals requires [clientDataSetId, rootIds]')
-        }
-        return await authHelper.signScheduleRemovals(data[0], data[1])
-
-      case Operation.DeleteProofSet:
-        if (data.length !== 1) {
-          throw this._createError('signOperation', 'DeleteProofSet requires [clientDataSetId]')
-        }
-        return await authHelper.signDeleteProofSet(data[0])
-
-      default:
-        throw this._createError('signOperation', `Unknown operation: ${operation as number}`)
-    }
   }
 
   /**

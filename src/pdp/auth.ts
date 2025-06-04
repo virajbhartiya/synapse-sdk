@@ -3,13 +3,13 @@
  */
 
 import { ethers } from 'ethers'
-import { Operation, type AuthSignature, type RootData } from './types.js'
-import { asCommP } from './commp/index.js'
+import { Operation, type AuthSignature, type RootData } from '../types.js'
+import { asCommP } from '../commp/index.js'
 
 /**
  * Helper functions to create properly formatted data for each operation
  */
-export class AuthHelper {
+export class PDPAuthHelper {
   private readonly serviceContractAddress: string
   private readonly signer: ethers.Signer
 

@@ -6,8 +6,9 @@
  * and optional CDN retrieval services.
  */
 
-import { CommP } from './commp/index.js'
 import type { ethers } from 'ethers'
+import { CommP } from './commp/index.js'
+import { PDPAuthHelper } from './pdp/index.js'
 
 // Type definitions for common values
 export { CommP }
@@ -141,20 +142,8 @@ export interface Synapse {
   /** Get the address of the current signer */
   getSignerAddress: () => Promise<string>
 
-  /** Sign CreateProofSet operation */
-  signCreateProofSet: (clientDataSetId: number | bigint, payee: string) => Promise<AuthSignature>
-
-  /** Sign AddRoots operation */
-  signAddRoots: (clientDataSetId: number | bigint, firstRootId: number | bigint, rootDataArray: RootData[]) => Promise<AuthSignature>
-
-  /** Sign ScheduleRemovals operation */
-  signScheduleRemovals: (clientDataSetId: number | bigint, rootIds: Array<number | bigint>) => Promise<AuthSignature>
-
-  /** Sign DeleteProofSet operation */
-  signDeleteProofSet: (clientDataSetId: number | bigint) => Promise<AuthSignature>
-
-  /** Legacy method - sign operation data for authentication */
-  signOperation: (operation: Operation, data: any[]) => Promise<AuthSignature>
+  /** Get PDPAuthHelper instance for signing operations */
+  getPDPAuthHelper: () => PDPAuthHelper
 }
 
 /**
