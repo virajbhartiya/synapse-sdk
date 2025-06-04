@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDP Tool Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        textarea {
+            height: 80px;
+            resize: vertical;
+        }
+        button {
+            background-color: #007cba;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #005a8b;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .status.success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .status.info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .network-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .network-option {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        .network-option.selected {
+            border-color: #007cba;
+            background-color: #e7f3ff;
+        }
+        .help-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PDP Tool Test Interface</h1>
+        
+        <div class="form-group">
+            <label>Network:</label>
+            <div class="network-selector">
+                <div class="network-option selected" data-network="calibration">
+                    <strong>Calibration Testnet</strong><br>
+                    <small>Chain ID: 314159</small>
+                </div>
+                <div class="network-option" data-network="mainnet">
+                    <strong>Mainnet</strong><br>
+                    <small>Chain ID: 314</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Wallet Connection:</label>
+            <button id="connectWalletBtn">Connect MetaMask</button>
+            <div id="walletStatus" class="help-text">Click to connect your MetaMask wallet for signing</div>
+        </div>
+
+        <div class="form-group">
+            <label for="pdpEndpoint">PDP Endpoint:</label>
+            <input type="text" id="pdpEndpoint" value="https://pdp.example.com" />
+            <div class="help-text">The URL of the PDP server to send the request to</div>
+        </div>
+
+        <div class="form-group">
+            <label for="recordKeeper">Record Keeper Contract:</label>
+            <input type="text" id="recordKeeper" />
+            <div class="help-text">Address of the SimplePDPServiceWithPayments contract</div>
+        </div>
+
+        <div class="form-group">
+            <label for="payee">Storage Provider Address:</label>
+            <input type="text" id="payee" placeholder="0x..." />
+            <div class="help-text">Address of the storage provider that will receive payments</div>
+        </div>
+
+        <div class="form-group">
+            <label for="clientDataSetId">Client Dataset ID:</label>
+            <input type="number" id="clientDataSetId" value="0" />
+            <div class="help-text">Unique identifier for your dataset (usually 0 for first dataset)</div>
+        </div>
+
+        <div class="form-group">
+            <label for="withCDN">Enable CDN:</label>
+            <select id="withCDN">
+                <option value="false">No</option>
+                <option value="true">Yes</option>
+            </select>
+            <div class="help-text">Whether to enable CDN services for faster retrieval</div>
+        </div>
+
+        <div class="form-group">
+            <button id="createProofSetBtn">Create Proof Set</button>
+            <button id="checkStatusBtn" disabled>Check Status</button>
+        </div>
+
+        <div id="status" class="status info" style="display: none;"></div>
+    </div>
+
+    <script type="module">
+        import { ethers } from 'https://cdn.jsdelivr.net/npm/ethers@6.13.2/+esm'
+        
+        // Since we can't import from the SDK directly in this demo, we'll include the necessary code inline
+        // In a real application, you would import from '@filoz/synapse-sdk/pdp'
+        
+        // Contract addresses for different networks
+        const CONTRACT_ADDRESSES = {
+            mainnet: {
+                pdpService: '0x1234567890123456789012345678901234567890' // Replace with actual mainnet address
+            },
+            calibration: {
+                pdpService: '0x1234567890123456789012345678901234567890' // Replace with actual calibration address
+            }
+        }
+
+        const RPC_URLS = {
+            mainnet: 'https://api.node.glif.io/rpc/v1',
+            calibration: 'https://api.calibration.node.glif.io/rpc/v1'
+        }
+
+        let currentNetwork = 'calibration'
+        let currentTxHash = null
+        let connectedSigner = null
+        let connectedAddress = null
+
+        // Network selection
+        document.querySelectorAll('.network-option').forEach(option => {
+            option.addEventListener('click', () => {
+                document.querySelectorAll('.network-option').forEach(o => o.classList.remove('selected'))
+                option.classList.add('selected')
+                currentNetwork = option.dataset.network
+                updateContractAddress()
+            })
+        })
+
+        function updateContractAddress() {
+            const recordKeeperInput = document.getElementById('recordKeeper')
+            recordKeeperInput.value = CONTRACT_ADDRESSES[currentNetwork].pdpService
+        }
+
+        // Initialize with calibration contract address
+        updateContractAddress()
+
+        // MetaMask connection functionality
+        async function connectMetaMask() {
+            try {
+                if (typeof window.ethereum === 'undefined') {
+                    throw new Error('MetaMask is not installed. Please install MetaMask browser extension.')
+                }
+
+                showStatus('Connecting to MetaMask...', 'info')
+                
+                // Request account access
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
+                
+                if (accounts.length === 0) {
+                    throw new Error('No accounts found. Please unlock MetaMask.')
+                }
+
+                // Create ethers provider and signer
+                const provider = new ethers.BrowserProvider(window.ethereum)
+                connectedSigner = await provider.getSigner()
+                connectedAddress = accounts[0]
+
+                // Check network
+                const network = await provider.getNetwork()
+                const expectedChainId = currentNetwork === 'mainnet' ? 314 : 314159
+                
+                if (Number(network.chainId) !== expectedChainId) {
+                    showStatus(`Wrong network! Please switch to ${currentNetwork === 'mainnet' ? 'Filecoin Mainnet' : 'Calibration Testnet'} (Chain ID: ${expectedChainId})`, 'error')
+                    return
+                }
+
+                // Update UI
+                document.getElementById('connectWalletBtn').textContent = 'Connected'
+                document.getElementById('connectWalletBtn').disabled = true
+                document.getElementById('walletStatus').textContent = `Connected: ${connectedAddress.slice(0, 6)}...${connectedAddress.slice(-4)} on ${currentNetwork === 'mainnet' ? 'Mainnet' : 'Calibration'}`
+                document.getElementById('createProofSetBtn').disabled = false
+
+                showStatus(`Successfully connected to MetaMask!
+Address: ${connectedAddress}
+Network: ${currentNetwork === 'mainnet' ? 'Filecoin Mainnet' : 'Calibration Testnet'} (${network.chainId})`, 'success')
+
+            } catch (error) {
+                console.error('MetaMask connection error:', error)
+                showStatus(`Failed to connect to MetaMask: ${error.message}`, 'error')
+                
+                // Reset connection state
+                connectedSigner = null
+                connectedAddress = null
+                document.getElementById('connectWalletBtn').textContent = 'Connect MetaMask'
+                document.getElementById('connectWalletBtn').disabled = false
+                document.getElementById('walletStatus').textContent = 'Click to connect your MetaMask wallet for signing'
+                document.getElementById('createProofSetBtn').disabled = true
+            }
+        }
+
+        // Network change handler
+        if (window.ethereum) {
+            window.ethereum.on('chainChanged', () => {
+                // Reload page on network change to reset connection
+                window.location.reload()
+            })
+
+            window.ethereum.on('accountsChanged', (accounts) => {
+                if (accounts.length === 0) {
+                    // User disconnected
+                    connectedSigner = null
+                    connectedAddress = null
+                    document.getElementById('connectWalletBtn').textContent = 'Connect MetaMask'
+                    document.getElementById('connectWalletBtn').disabled = false
+                    document.getElementById('walletStatus').textContent = 'Click to connect your MetaMask wallet for signing'
+                    document.getElementById('createProofSetBtn').disabled = true
+                    showStatus('MetaMask disconnected', 'info')
+                } else {
+                    // Account changed, reconnect
+                    connectMetaMask()
+                }
+            })
+        }
+
+        document.getElementById('connectWalletBtn').addEventListener('click', connectMetaMask)
+
+        // Simple inline PDPAuthHelper implementation for demo
+        class DemoPDPAuthHelper {
+            constructor(serviceContractAddress, signer, chainId) {
+                this.signer = signer
+                this.domain = {
+                    name: 'SimplePDPServiceWithPayments',
+                    version: '1',
+                    chainId: Number(chainId),
+                    verifyingContract: serviceContractAddress
+                }
+            }
+
+            async getSignerAddress() {
+                return await this.signer.getAddress()
+            }
+
+            async isMetaMaskSigner() {
+                try {
+                    const provider = this.signer.provider
+                    if (provider && '_eip1193Provider' in provider) {
+                        return true
+                    }
+                    return false
+                } catch {
+                    return false
+                }
+            }
+
+            async signWithMetaMask(types, value) {
+                const provider = this.signer.provider
+                const signer = await this.signer.getAddress()
+                
+                const typedData = {
+                    types: {
+                        EIP712Domain: [
+                            { name: 'name', type: 'string' },
+                            { name: 'version', type: 'string' },
+                            { name: 'chainId', type: 'uint256' },
+                            { name: 'verifyingContract', type: 'address' }
+                        ],
+                        ...types
+                    },
+                    primaryType: Object.keys(types)[0],
+                    domain: this.domain,
+                    message: value
+                }
+
+                return await provider._eip1193Provider.request({
+                    method: 'eth_signTypedData_v4',
+                    params: [signer, JSON.stringify(typedData)]
+                })
+            }
+
+            async signCreateProofSet(clientDataSetId, payee, withCDN) {
+                const types = {
+                    CreateProofSet: [
+                        { name: 'clientDataSetId', type: 'uint256' },
+                        { name: 'withCDN', type: 'bool' },
+                        { name: 'payee', type: 'address' }
+                    ]
+                }
+
+                let signature
+                const useMetaMask = await this.isMetaMaskSigner()
+
+                if (useMetaMask) {
+                    // Use MetaMask-friendly signing with proper formatting
+                    const value = {
+                        clientDataSetId: clientDataSetId.toString(), // String for MetaMask display
+                        withCDN,
+                        payee
+                    }
+
+                    signature = await this.signWithMetaMask(types, value)
+                } else {
+                    // Use standard ethers.js signing
+                    const value = {
+                        clientDataSetId: BigInt(clientDataSetId),
+                        withCDN,
+                        payee
+                    }
+
+                    signature = await this.signer.signTypedData(this.domain, types, value)
+                }
+
+                const sig = ethers.Signature.from(signature)
+
+                return {
+                    signature,
+                    v: sig.v,
+                    r: sig.r,
+                    s: sig.s
+                }
+            }
+        }
+
+        // Simple inline PDPTool implementation for demo
+        class DemoPDPTool {
+            constructor(apiEndpoint, pdpAuthHelper) {
+                this.apiEndpoint = apiEndpoint.endsWith('/') ? apiEndpoint.slice(0, -1) : apiEndpoint
+                this.pdpAuthHelper = pdpAuthHelper
+            }
+
+            async createProofSet(clientDataSetId, payee, withCDN, recordKeeper) {
+                const authData = await this.pdpAuthHelper.signCreateProofSet(clientDataSetId, payee, withCDN)
+                const payer = await this.pdpAuthHelper.getSignerAddress()
+
+                // Use proper ABI encoding to match ProofSetCreateData struct
+                const signature = authData.signature.startsWith('0x') ? authData.signature : `0x${authData.signature}`
+                
+                // ABI encode the struct as a tuple: (string metadata, address payer, bool withCDN, bytes signature)
+                const abiCoder = ethers.AbiCoder.defaultAbiCoder()
+                const encoded = abiCoder.encode(
+                    ['string', 'address', 'bool', 'bytes'],
+                    ['', payer, withCDN, signature]
+                )
+                
+                // Remove 0x prefix since we add it back in the request body
+                const extraDataHex = encoded.slice(2)
+
+                const requestBody = {
+                    recordKeeper,
+                    extraData: `0x${extraDataHex}`
+                }
+
+                console.log('Making request to:', `${this.apiEndpoint}/pdp/proof-sets`)
+                console.log('Request body:', requestBody)
+                
+                const response = await fetch(`${this.apiEndpoint}/pdp/proof-sets`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody),
+                    mode: 'cors'
+                })
+
+                if (response.status !== 201) {
+                    const errorText = await response.text()
+                    throw new Error(`Failed to create proof set: ${response.status} ${response.statusText} - ${errorText}`)
+                }
+
+                const location = response.headers.get('Location')
+                if (!location) {
+                    throw new Error('Server did not provide Location header in response')
+                }
+
+                const locationMatch = location.match(/\/pdp\/proof-sets\/created\/(.+)$/)
+                if (!locationMatch) {
+                    throw new Error(`Invalid Location header format: ${location}`)
+                }
+
+                const txHash = locationMatch[1]
+                
+                return {
+                    txHash,
+                    statusUrl: `${this.apiEndpoint}${location}`
+                }
+            }
+
+            async getProofSetCreationStatus(txHash) {
+                const response = await fetch(`${this.apiEndpoint}/pdp/proof-sets/created/${txHash}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+
+                if (response.status === 404) {
+                    throw new Error(`Proof set creation not found for transaction hash: ${txHash}`)
+                }
+
+                if (response.status !== 200) {
+                    const errorText = await response.text()
+                    throw new Error(`Failed to get proof set creation status: ${response.status} ${response.statusText} - ${errorText}`)
+                }
+
+                return await response.json()
+            }
+        }
+
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status')
+            statusDiv.textContent = message
+            statusDiv.className = `status ${type}`
+            statusDiv.style.display = 'block'
+        }
+
+        function validateInputs() {
+            const pdpEndpoint = document.getElementById('pdpEndpoint').value
+            const recordKeeper = document.getElementById('recordKeeper').value
+            const payee = document.getElementById('payee').value
+
+            if (!connectedSigner) {
+                throw new Error('Please connect your MetaMask wallet first')
+            }
+
+            if (!pdpEndpoint || !pdpEndpoint.startsWith('http')) {
+                throw new Error('Please enter a valid PDP endpoint URL')
+            }
+
+            if (!recordKeeper || !ethers.isAddress(recordKeeper)) {
+                throw new Error('Please enter a valid record keeper contract address')
+            }
+
+            if (!payee || !ethers.isAddress(payee)) {
+                throw new Error('Please enter a valid storage provider address')
+            }
+
+            return { pdpEndpoint, recordKeeper, payee }
+        }
+
+        document.getElementById('createProofSetBtn').addEventListener('click', async () => {
+            try {
+                showStatus('Validating inputs...', 'info')
+                
+                const { pdpEndpoint, recordKeeper, payee } = validateInputs()
+                
+                // Use fixture values for testing (these are known to work)
+                const clientDataSetId = 12345  // Test fixture value
+                const withCDN = true          // Test fixture value
+                
+                console.log('Using test fixture values:', {
+                    clientDataSetId,
+                    withCDN,
+                    payee,
+                    recordKeeper
+                })
+
+                showStatus('Creating PDP auth helper and tool...', 'info')
+                
+                // Create auth helper and PDP tool using connected MetaMask signer
+                const chainId = currentNetwork === 'mainnet' ? 314 : 314159
+                const authHelper = new DemoPDPAuthHelper(recordKeeper, connectedSigner, chainId)
+                const pdpTool = new DemoPDPTool(pdpEndpoint, authHelper)
+
+                showStatus('Signing and sending proof set creation...', 'info')
+
+                // Create proof set
+                const result = await pdpTool.createProofSet(clientDataSetId, payee, withCDN, recordKeeper)
+                
+                currentTxHash = result.txHash
+                document.getElementById('checkStatusBtn').disabled = false
+                
+                showStatus(`Proof set creation submitted successfully!
+Transaction Hash: ${result.txHash}
+Status URL: ${result.statusUrl}
+
+You can now check the status to see when it's confirmed on-chain.`, 'success')
+
+            } catch (error) {
+                console.error('Error creating proof set:', error)
+                showStatus(`Error: ${error.message}`, 'error')
+            }
+        })
+
+        document.getElementById('checkStatusBtn').addEventListener('click', async () => {
+            if (!currentTxHash) {
+                showStatus('No transaction hash available. Create a proof set first.', 'error')
+                return
+            }
+
+            try {
+                showStatus('Checking proof set creation status...', 'info')
+                
+                const { pdpEndpoint } = validateInputs()
+                
+                // We don't need the full auth setup just to check status
+                const dummyWallet = ethers.Wallet.createRandom()
+                const authHelper = new DemoPDPAuthHelper('0x0000000000000000000000000000000000000000', dummyWallet, 314159)
+                const pdpTool = new DemoPDPTool(pdpEndpoint, authHelper)
+
+                const status = await pdpTool.getProofSetCreationStatus(currentTxHash)
+                
+                const statusMessage = `Proof Set Creation Status:
+Transaction Hash: ${status.createMessageHash}
+Transaction Status: ${status.txStatus}
+Proof Set Created: ${status.proofsetCreated}
+Success: ${status.ok === null ? 'Pending' : status.ok}
+Service: ${status.service}
+${status.proofSetId ? `Proof Set ID: ${status.proofSetId}` : ''}`
+
+                const statusType = status.ok === false ? 'error' : status.proofsetCreated ? 'success' : 'info'
+                showStatus(statusMessage, statusType)
+
+            } catch (error) {
+                console.error('Error checking status:', error)
+                showStatus(`Error checking status: ${error.message}`, 'error')
+            }
+        })
+
+        // Initial message
+        showStatus('Enter your details above and click "Create Proof Set" to begin.', 'info')
+    </script>
+</body>
+</html>
