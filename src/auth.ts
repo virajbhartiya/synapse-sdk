@@ -189,8 +189,8 @@ export function createAuthBlob (authSignature: AuthSignature): string {
   // Based on the contract's decode methods, this might be:
   // abi.encode(signature, metadata) or just the signature
 
-  // For now, return the signature as base64 (can be adjusted based on PDP service expectations)
-  return Buffer.from(authSignature.signature.slice(2), 'hex').toString('base64')
+  // For now, return the signature as hex (to be adjusted when we know what we need)
+  return authSignature.signature
 }
 
 /**
