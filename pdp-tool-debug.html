@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDP Tool Debug - Create Proof Set</title>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.9.0/dist/ethers.umd.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            background-color: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .field {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .output {
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .success {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+        .info {
+            color: blue;
+        }
+        .debug-section {
+            background-color: #e8f4f8;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>PDP Tool Debug - Create Proof Set</h1>
+
+    <div class="container">
+        <h2>Configuration</h2>
+        <div class="field">
+            <label for="recordKeeperAddress">Record Keeper Contract Address (SimplePDPServiceWithPayments):</label>
+            <input type="text" id="recordKeeperAddress" value="0x2A52ad62421F2a600F72dCE2bB98051103cCa589">
+        </div>
+        <div class="field">
+            <label for="pdpEndpoint">PDP Endpoint URL:</label>
+            <input type="text" id="pdpEndpoint" value="http://192.168.1.5:4702">
+        </div>
+        <div class="field">
+            <label for="storageProvider">Storage Provider Address:</label>
+            <input type="text" id="storageProvider" value="0x78bF4d833fC2ba1Abd42Bc772edbC788EC76A28F">
+        </div>
+        <div class="field">
+            <label for="withCDN">With CDN:</label>
+            <input type="checkbox" id="withCDN" checked>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Debug Actions</h2>
+        <button onclick="checkProviderStatus()">Check Provider Status</button>
+        <button onclick="checkContractConfig()">Check Contract Config</button>
+        <button onclick="checkAllowance()">Check USDFC Allowance</button>
+        <button onclick="simulateTransaction()">Simulate Transaction</button>
+        <button onclick="createProofSet()">Create Proof Set</button>
+    </div>
+
+    <div class="container">
+        <h2>Output</h2>
+        <div id="output" class="output"></div>
+    </div>
+
+    <div class="container debug-section">
+        <h2>Debug Information</h2>
+        <div id="debugInfo" class="output"></div>
+    </div>
+
+    <script>
+        // SimplePDPServiceWithPayments ABI (relevant functions)
+        const contractABI = [
+            "function isProviderApproved(address provider) view returns (bool)",
+            "function pdpVerifierAddress() view returns (address)",
+            "function usdFcTokenAddress() view returns (address)",
+            "function paymentsContractAddress() view returns (address)",
+            "function PROOFSET_CREATION_FEE() view returns (uint256)",
+            "function getProviderIdByAddress(address provider) view returns (uint256)",
+            "function getApprovedProvider(uint256 providerId) view returns (tuple(address owner, string pdpUrl, string pieceRetrievalUrl, uint256 registeredAt, uint256 approvedAt))",
+            "function proofSetCreated(uint256 proofSetId, address creator, bytes calldata extraData)",
+            "function clientDataSetIDs(address client) view returns (uint256)"
+        ];
+
+        // ERC20 ABI for USDFC
+        const erc20ABI = [
+            "function allowance(address owner, address spender) view returns (uint256)",
+            "function balanceOf(address account) view returns (uint256)",
+            "function decimals() view returns (uint8)",
+            "function approve(address spender, uint256 amount) returns (bool)"
+        ];
+
+        let provider;
+        let signer;
+        let contract;
+        
+        function log(message, type = 'info') {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
+            output.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function debugLog(message) {
+            const debugInfo = document.getElementById('debugInfo');
+            debugInfo.innerHTML += `${message}\n`;
+            debugInfo.scrollTop = debugInfo.scrollHeight;
+        }
+
+        async function initializeEthers() {
+            if (typeof window.ethereum === 'undefined') {
+                log('Please install MetaMask!', 'error');
+                return false;
+            }
+
+            try {
+                await window.ethereum.request({ method: 'eth_requestAccounts' });
+                provider = new ethers.BrowserProvider(window.ethereum);
+                signer = await provider.getSigner();
+                
+                const address = await signer.getAddress();
+                const network = await provider.getNetwork();
+                
+                log(`Connected to wallet: ${address}`);
+                log(`Network: ${network.name} (Chain ID: ${network.chainId})`);
+                
+                // Verify we're on Calibration testnet
+                if (network.chainId !== 314159n) {
+                    log('Warning: Not on Calibration testnet!', 'error');
+                }
+                
+                const contractAddress = document.getElementById('recordKeeperAddress').value;
+                contract = new ethers.Contract(contractAddress, contractABI, signer);
+                
+                return true;
+            } catch (error) {
+                log(`Failed to initialize: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        async function checkProviderStatus() {
+            if (!await initializeEthers()) return;
+            
+            try {
+                const spAddress = document.getElementById('storageProvider').value;
+                log(`Checking status for provider: ${spAddress}`);
+                
+                // Check if provider is approved
+                const isApproved = await contract.isProviderApproved(spAddress);
+                log(`Provider approved: ${isApproved}`);
+                
+                if (isApproved) {
+                    // Get provider ID
+                    const providerId = await contract.getProviderIdByAddress(spAddress);
+                    log(`Provider ID: ${providerId}`);
+                    
+                    // Get provider details
+                    const providerInfo = await contract.getApprovedProvider(providerId);
+                    log(`Provider Info:`);
+                    log(`  Owner: ${providerInfo.owner}`);
+                    log(`  PDP URL: ${providerInfo.pdpUrl}`);
+                    log(`  Retrieval URL: ${providerInfo.pieceRetrievalUrl}`);
+                    log(`  Registered At: ${providerInfo.registeredAt}`);
+                    log(`  Approved At: ${providerInfo.approvedAt}`);
+                } else {
+                    log('Provider is NOT approved!', 'error');
+                }
+                
+            } catch (error) {
+                log(`Error checking provider status: ${error.message}`, 'error');
+                debugLog(`Full error: ${JSON.stringify(error, null, 2)}`);
+            }
+        }
+
+        async function checkContractConfig() {
+            if (!await initializeEthers()) return;
+            
+            try {
+                log('Checking contract configuration...');
+                
+                const pdpVerifier = await contract.pdpVerifierAddress();
+                const usdfc = await contract.usdFcTokenAddress();
+                const payments = await contract.paymentsContractAddress();
+                const fee = await contract.PROOFSET_CREATION_FEE();
+                
+                log(`PDPVerifier: ${pdpVerifier}`);
+                log(`USDFC Token: ${usdfc}`);
+                log(`Payments Contract: ${payments}`);
+                log(`Creation Fee: ${ethers.formatEther(fee)} USDFC`);
+                
+                // Expected PDPVerifier for Curio
+                const expectedPDPVerifier = '0x5A23b7df87f59A291C26A2A1d684AD03Ce9B68DC';
+                if (pdpVerifier.toLowerCase() !== expectedPDPVerifier.toLowerCase()) {
+                    log(`WARNING: PDPVerifier mismatch! Expected ${expectedPDPVerifier}`, 'error');
+                } else {
+                    log('PDPVerifier matches Curio\'s address ✓', 'success');
+                }
+                
+            } catch (error) {
+                log(`Error checking contract config: ${error.message}`, 'error');
+                debugLog(`Full error: ${JSON.stringify(error, null, 2)}`);
+            }
+        }
+
+        async function checkAllowance() {
+            if (!await initializeEthers()) return;
+            
+            try {
+                const contractAddress = document.getElementById('recordKeeperAddress').value;
+                const userAddress = await signer.getAddress();
+                
+                // Get USDFC token address from contract
+                const usdfcAddress = await contract.usdFcTokenAddress();
+                const usdfcToken = new ethers.Contract(usdfcAddress, erc20ABI, signer);
+                
+                // Check balance
+                const balance = await usdfcToken.balanceOf(userAddress);
+                const decimals = await usdfcToken.decimals();
+                log(`USDFC Balance: ${ethers.formatUnits(balance, decimals)}`);
+                
+                // Check allowance
+                const allowance = await usdfcToken.allowance(userAddress, contractAddress);
+                log(`USDFC Allowance for contract: ${ethers.formatUnits(allowance, decimals)}`);
+                
+                // Get required fee
+                const fee = await contract.PROOFSET_CREATION_FEE();
+                log(`Required fee: ${ethers.formatUnits(fee, decimals)}`);
+                
+                if (allowance < fee) {
+                    log('Insufficient allowance! Need to approve USDFC spending.', 'error');
+                    
+                    // Offer to approve
+                    if (confirm('Would you like to approve USDFC spending now?')) {
+                        log('Approving USDFC...');
+                        const tx = await usdfcToken.approve(contractAddress, ethers.parseUnits('10', decimals)); // Approve 10 USDFC
+                        log(`Approval transaction sent: ${tx.hash}`);
+                        await tx.wait();
+                        log('Approval confirmed!', 'success');
+                    }
+                } else {
+                    log('Sufficient allowance ✓', 'success');
+                }
+                
+            } catch (error) {
+                log(`Error checking allowance: ${error.message}`, 'error');
+                debugLog(`Full error: ${JSON.stringify(error, null, 2)}`);
+            }
+        }
+
+        async function simulateTransaction() {
+            if (!await initializeEthers()) return;
+            
+            try {
+                log('Simulating proof set creation...');
+                
+                const pdpEndpoint = document.getElementById('pdpEndpoint').value;
+                const recordKeeperAddress = document.getElementById('recordKeeperAddress').value;
+                const storageProvider = document.getElementById('storageProvider').value;
+                const withCDN = document.getElementById('withCDN').checked;
+                const clientAddress = await signer.getAddress();
+                
+                // Create the signature
+                const domain = {
+                    name: "SimplePDPServiceWithPayments",
+                    version: "1",
+                    chainId: 314159,
+                    verifyingContract: recordKeeperAddress
+                };
+
+                const types = {
+                    CreateProofSet: [
+                        { name: "clientDataSetId", type: "uint256" },
+                        { name: "withCDN", type: "bool" },
+                        { name: "payee", type: "address" }
+                    ]
+                };
+
+                const value = {
+                    clientDataSetId: 0, // This will be the first proof set for this client
+                    withCDN: withCDN,
+                    payee: storageProvider
+                };
+
+                debugLog(`Signing data:\nDomain: ${JSON.stringify(domain, null, 2)}\nTypes: ${JSON.stringify(types, null, 2)}\nValue: ${JSON.stringify(value, null, 2)}`);
+                
+                const signature = await signer.signTypedData(domain, types, value);
+                log(`Signature generated: ${signature.substring(0, 20)}...`);
+
+                // Prepare the extraData
+                const abiCoder = new ethers.AbiCoder();
+                const metadata = "Test proof set";
+                const extraData = abiCoder.encode(
+                    ["string", "address", "bool", "bytes"],
+                    [metadata, clientAddress, withCDN, signature]
+                );
+                
+                debugLog(`ExtraData: ${extraData}`);
+
+                // Try a static call to see what happens
+                log('Testing contract call (static)...');
+                try {
+                    // We can't override from address in ethers v6, but we can check other things
+                    // First, let's verify the storage provider is approved
+                    const isApproved = await contract.isProviderApproved(storageProvider);
+                    if (!isApproved) {
+                        log('ERROR: Storage provider is NOT approved in the contract!', 'error');
+                        log('The storage provider must be registered and approved first.', 'error');
+                        return;
+                    }
+                    
+                    // Check the client's current dataSetId
+                    const currentDataSetId = await contract.clientDataSetIDs(clientAddress);
+                    log(`Client's next dataSetId will be: ${currentDataSetId}`);
+                    
+                    // We can't directly simulate the PDPVerifier call, but we can check everything else
+                    log('All pre-checks passed ✓', 'success');
+                    log('The transaction should work when called by the PDP server.', 'success');
+                    
+                } catch (staticError) {
+                    log(`Static call error: ${staticError.message}`, 'error');
+                    debugLog(`Full error: ${JSON.stringify(staticError, null, 2)}`);
+                }
+                
+            } catch (error) {
+                log(`Simulation error: ${error.message}`, 'error');
+                debugLog(`Full error: ${JSON.stringify(error, null, 2)}`);
+            }
+        }
+
+        async function createProofSet() {
+            if (!await initializeEthers()) return;
+
+            try {
+                const pdpEndpoint = document.getElementById('pdpEndpoint').value;
+                const recordKeeperAddress = document.getElementById('recordKeeperAddress').value;
+                const storageProvider = document.getElementById('storageProvider').value;
+                const withCDN = document.getElementById('withCDN').checked;
+                const clientAddress = await signer.getAddress();
+
+                log(`Creating proof set...`);
+                log(`PDP Endpoint: ${pdpEndpoint}`);
+                log(`Record Keeper: ${recordKeeperAddress}`);
+                log(`Storage Provider: ${storageProvider}`);
+                log(`Client: ${clientAddress}`);
+                log(`With CDN: ${withCDN}`);
+
+                // Create the signature
+                const domain = {
+                    name: "SimplePDPServiceWithPayments",
+                    version: "1",
+                    chainId: 314159,
+                    verifyingContract: recordKeeperAddress
+                };
+
+                const types = {
+                    CreateProofSet: [
+                        { name: "clientDataSetId", type: "uint256" },
+                        { name: "withCDN", type: "bool" },
+                        { name: "payee", type: "address" }
+                    ]
+                };
+
+                const value = {
+                    clientDataSetId: 0, // This will be the first proof set for this client
+                    withCDN: withCDN,
+                    payee: storageProvider
+                };
+
+                const signature = await signer.signTypedData(domain, types, value);
+                log(`Signature created`);
+
+                // Prepare the extraData as the contract expects it
+                const abiCoder = new ethers.AbiCoder();
+                const metadata = "Test proof set from debug page";
+                const extraData = abiCoder.encode(
+                    ["string", "address", "bool", "bytes"],
+                    [metadata, clientAddress, withCDN, signature]
+                );
+
+                // Create the request data in Curio's expected format
+                const requestData = {
+                    recordKeeper: recordKeeperAddress,
+                    extraData: extraData
+                };
+
+                debugLog(`Request data: ${JSON.stringify(requestData, null, 2)}`);
+
+                // Send the request
+                const response = await fetch(`${pdpEndpoint}/pdp/proof-sets`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                const responseText = await response.text();
+                
+                if (response.ok) {
+                    const result = JSON.parse(responseText);
+                    log(`Success! Proof Set ID: ${result.proof_set_id}`, 'success');
+                    debugLog(`Full response: ${JSON.stringify(result, null, 2)}`);
+                } else {
+                    log(`Failed: ${response.status} ${response.statusText}`, 'error');
+                    log(`Error: ${responseText}`, 'error');
+                    debugLog(`Full response: ${responseText}`);
+                }
+
+            } catch (error) {
+                log(`Error: ${error.message}`, 'error');
+                debugLog(`Full error: ${error.stack}`);
+            }
+        }
+    </script>
+</body>
+</html>
