@@ -34,7 +34,7 @@ const EIP712_TYPES = {
   ],
   ScheduleRemovals: [
     { name: 'clientDataSetId', type: 'uint256' },
-    { name: 'rootIdsHash', type: 'bytes32' }
+    { name: 'rootIds', type: 'uint256[]' }
   ],
   DeleteProofSet: [
     { name: 'clientDataSetId', type: 'uint256' }
@@ -421,13 +421,8 @@ export class PDPAuthHelper {
     clientDataSetId: number | bigint,
     rootIds: Array<number | bigint>
   ): Promise<AuthSignature> {
-    // Contract expects a hash of the rootIds array using encodePacked
-    // For abi.encodePacked with uint256[], we concatenate each uint256 as 32 bytes
+    // Convert rootIds to BigInt array for proper encoding
     const rootIdsBigInt = rootIds.map(id => BigInt(id))
-    const packedData = ethers.concat(
-      rootIdsBigInt.map(id => ethers.toBeHex(id, 32))
-    )
-    const rootIdsHash = ethers.keccak256(packedData)
 
     let signature: string
 
@@ -438,7 +433,7 @@ export class PDPAuthHelper {
       // Use MetaMask-friendly signing for better UX
       const value = {
         clientDataSetId: clientDataSetId.toString(), // Keep as string for MetaMask display
-        rootIdsHash
+        rootIds: rootIdsBigInt.map(id => id.toString()) // Convert to string array for display
       }
 
       signature = await this.signWithMetaMask(
@@ -449,7 +444,7 @@ export class PDPAuthHelper {
       // Use standard ethers.js signing
       const value = {
         clientDataSetId: BigInt(clientDataSetId),
-        rootIdsHash
+        rootIds: rootIdsBigInt
       }
 
       signature = await this.signer.signTypedData(
@@ -467,7 +462,7 @@ export class PDPAuthHelper {
       { ScheduleRemovals: EIP712_TYPES.ScheduleRemovals },
       {
         clientDataSetId: BigInt(clientDataSetId),
-        rootIdsHash
+        rootIds: rootIdsBigInt
       }
     )
 
@@ -547,6 +542,14 @@ export class PDPAuthHelper {
       s: sig.s,
       signedData
     }
+  }
+
+  /**
+   * Get the address of the signer
+   * @returns Promise resolving to the signer's Ethereum address
+   */
+  async getSignerAddress (): Promise<string> {
+    return await this.signer.getAddress()
   }
 }
 
