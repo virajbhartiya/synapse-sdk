@@ -6,6 +6,13 @@ import { ethers } from 'ethers'
 import { type AuthSignature, type RootData } from '../types.js'
 import { asCommP } from '../commp/index.js'
 
+// Declare window.ethereum for TypeScript
+declare global {
+  interface Window {
+    ethereum?: any
+  }
+}
+
 // EIP-712 Type definitions
 const EIP712_TYPES = {
   CreateProofSet: [
@@ -78,6 +85,103 @@ export class PDPAuthHelper {
   }
 
   /**
+   * Check if the signer is a browser provider (MetaMask, etc)
+   */
+  private async isMetaMaskSigner (): Promise<boolean> {
+    try {
+      // Check if signer has a provider
+      const provider = this.signer.provider
+      if (provider == null) {
+        return false
+      }
+
+      // Check for ethers v6 BrowserProvider
+      if ('_eip1193Provider' in provider) {
+        return true
+      }
+
+      // Check for window.ethereum (browser environment)
+      if (typeof globalThis !== 'undefined' && 'window' in globalThis) {
+        const win = globalThis as any
+        if (win.window?.ethereum != null) {
+          return true
+        }
+      }
+
+      // Check for provider with send method
+      if ('send' in provider || 'request' in provider) {
+        return true
+      }
+    } catch (error) {
+      // Silently fail and return false
+    }
+    return false
+  }
+
+  /**
+   * Sign typed data with MetaMask-friendly display
+   * This bypasses ethers.js conversion to show human-readable values in MetaMask
+   */
+  private async signWithMetaMask (
+    types: Record<string, Array<{ name: string, type: string }>>,
+    value: any
+  ): Promise<string> {
+    const provider = this.signer.provider
+    if (provider == null) {
+      throw new Error('No provider available')
+    }
+
+    const signerAddress = await this.signer.getAddress()
+
+    // Construct the full typed data payload for MetaMask
+    const typedData = {
+      types: {
+        EIP712Domain: [
+          { name: 'name', type: 'string' },
+          { name: 'version', type: 'string' },
+          { name: 'chainId', type: 'uint256' },
+          { name: 'verifyingContract', type: 'address' }
+        ],
+        ...types
+      },
+      primaryType: Object.keys(types)[0],
+      domain: this.domain,
+      message: value
+    }
+
+    // For ethers v6, we need to access the underlying EIP-1193 provider
+    let eip1193Provider: any
+    if ('_eip1193Provider' in provider) {
+      // BrowserProvider in ethers v6
+      eip1193Provider = (provider as any)._eip1193Provider
+    } else if ('request' in provider) {
+      // Already an EIP-1193 provider
+      eip1193Provider = provider
+    } else {
+      // Fallback to provider.send
+      eip1193Provider = provider
+    }
+
+    // Call MetaMask directly for better UX
+    let signature: string
+    if (eip1193Provider != null && 'request' in eip1193Provider) {
+      // Use EIP-1193 request method
+      signature = await eip1193Provider.request({
+        method: 'eth_signTypedData_v4',
+        params: [signerAddress.toLowerCase(), JSON.stringify(typedData)]
+      })
+    } else {
+      // Fallback to send method
+      signature = await (provider as any).send('eth_signTypedData_v4', [
+        signerAddress.toLowerCase(),
+        JSON.stringify(typedData)
+      ])
+    }
+
+    return signature
+  }
+
+  /**
    * Create signature for proof set creation
    *
    * This signature authorizes a storage provider to create a new proof set
@@ -104,17 +208,37 @@ export class PDPAuthHelper {
     payee: string,
     withCDN: boolean = false
   ): Promise<AuthSignature> {
-    const value = {
-      clientDataSetId: BigInt(clientDataSetId),
-      withCDN,
-      payee
-    }
+    let signature: string
 
-    const signature = await this.signer.signTypedData(
-      this.domain,
-      { CreateProofSet: EIP712_TYPES.CreateProofSet },
-      value
-    )
+    // Check if we should use MetaMask-friendly signing
+    const useMetaMask = await this.isMetaMaskSigner()
+
+    if (useMetaMask) {
+      // Use MetaMask-friendly signing for better UX
+      const value = {
+        clientDataSetId: clientDataSetId.toString(), // Keep as string for MetaMask display
+        withCDN,
+        payee
+      }
+
+      signature = await this.signWithMetaMask(
+        { CreateProofSet: EIP712_TYPES.CreateProofSet },
+        value
+      )
+    } else {
+      // Use standard ethers.js signing (for private keys, etc)
+      const value = {
+        clientDataSetId: BigInt(clientDataSetId),
+        withCDN,
+        payee
+      }
+
+      signature = await this.signer.signTypedData(
+        this.domain,
+        { CreateProofSet: EIP712_TYPES.CreateProofSet },
+        value
+      )
+    }
 
     // Return signature with components
     const sig = ethers.Signature.from(signature)
@@ -123,7 +247,11 @@ export class PDPAuthHelper {
     const signedData = ethers.TypedDataEncoder.hash(
       this.domain,
       { CreateProofSet: EIP712_TYPES.CreateProofSet },
-      value
+      {
+        clientDataSetId: BigInt(clientDataSetId),
+        withCDN,
+        payee
+      }
     )
 
     return {
@@ -166,9 +294,28 @@ export class PDPAuthHelper {
     firstRootId: number | bigint,
     rootDataArray: RootData[]
   ): Promise<AuthSignature> {
-    // Manual hash calculation to match Solidity exactly
-    // ethers.js TypedDataEncoder doesn't handle dynamic arrays correctly for our use case
+    // Check if we should use MetaMask-friendly signing
+    const useMetaMask = await this.isMetaMaskSigner()
 
+    if (useMetaMask) {
+      // For MetaMask, we need to keep the manual approach due to the array encoding issue
+      // But we'll sign using eth_sign to work with MetaMask
+      return await this.signAddRootsManually(clientDataSetId, firstRootId, rootDataArray)
+    }
+
+    // For private key signers, also use manual approach for compatibility
+    return await this.signAddRootsManually(clientDataSetId, firstRootId, rootDataArray)
+  }
+
+  /**
+   * Manual implementation of AddRoots signature to match Solidity exactly
+   * This is necessary due to ethers.js incompatibility with dynamic array encoding
+   */
+  private async signAddRootsManually (
+    clientDataSetId: number | bigint,
+    firstRootId: number | bigint,
+    rootDataArray: RootData[]
+  ): Promise<AuthSignature> {
     // Step 1: Calculate type hashes
     const cidTypeHash = ethers.keccak256(ethers.toUtf8Bytes('Cid(bytes data)'))
     const rootDataTypeHash = ethers.keccak256(ethers.toUtf8Bytes('RootData(Cid root,uint256 rawSize)Cid(bytes data)'))
@@ -206,7 +353,6 @@ export class PDPAuthHelper {
     }
 
     // Step 3: Calculate array hash using correct Solidity encoding
-    // This matches Solidity's abi.encode(rootDataHashes)
     const arrayHash = ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(
       ['bytes32[]'],
       [rootDataHashes]
@@ -226,8 +372,7 @@ export class PDPAuthHelper {
       structHash
     ]))
 
-    // Step 6: Sign the hash directly (no message prefix)
-    // For EIP-712, we need to sign the raw hash without the Ethereum message prefix
+    // Step 6: Sign the hash
     let signature: string
     let sig: ethers.Signature
 
@@ -236,10 +381,14 @@ export class PDPAuthHelper {
       const signingKey = this.signer.signingKey as any
       sig = signingKey.sign(signedData)
       signature = sig.serialized
+    } else if (await this.isMetaMaskSigner()) {
+      // For MetaMask, use eth_sign (will show a warning but works)
+      const provider = this.signer.provider as any
+      const address = await this.signer.getAddress()
+      signature = await provider.send('eth_sign', [address.toLowerCase(), signedData])
+      sig = ethers.Signature.from(signature)
     } else {
-      // For other signers (like browser providers), we need to fall back to a different approach
-      // This is a limitation where we can't easily get raw hash signatures
-      throw new Error('AddRoots signature generation requires a Wallet with direct private key access. Browser providers and external signers are not currently supported for this operation.')
+      throw new Error('AddRoots signature generation requires a Wallet or MetaMask signer.')
     }
 
     return {
@@ -283,16 +432,35 @@ export class PDPAuthHelper {
       )
     )
 
-    const value = {
-      clientDataSetId: BigInt(clientDataSetId),
-      rootIdsHash
-    }
+    let signature: string
 
-    const signature = await this.signer.signTypedData(
-      this.domain,
-      { ScheduleRemovals: EIP712_TYPES.ScheduleRemovals },
-      value
-    )
+    // Check if we should use MetaMask-friendly signing
+    const useMetaMask = await this.isMetaMaskSigner()
+
+    if (useMetaMask) {
+      // Use MetaMask-friendly signing for better UX
+      const value = {
+        clientDataSetId: clientDataSetId.toString(), // Keep as string for MetaMask display
+        rootIdsHash
+      }
+
+      signature = await this.signWithMetaMask(
+        { ScheduleRemovals: EIP712_TYPES.ScheduleRemovals },
+        value
+      )
+    } else {
+      // Use standard ethers.js signing
+      const value = {
+        clientDataSetId: BigInt(clientDataSetId),
+        rootIdsHash
+      }
+
+      signature = await this.signer.signTypedData(
+        this.domain,
+        { ScheduleRemovals: EIP712_TYPES.ScheduleRemovals },
+        value
+      )
+    }
 
     const sig = ethers.Signature.from(signature)
 
@@ -300,7 +468,10 @@ export class PDPAuthHelper {
     const signedData = ethers.TypedDataEncoder.hash(
       this.domain,
       { ScheduleRemovals: EIP712_TYPES.ScheduleRemovals },
-      value
+      {
+        clientDataSetId: BigInt(clientDataSetId),
+        rootIdsHash
+      }
     )
 
     return {
@@ -333,15 +504,33 @@ export class PDPAuthHelper {
   async signDeleteProofSet (
     clientDataSetId: number | bigint
   ): Promise<AuthSignature> {
-    const value = {
-      clientDataSetId: BigInt(clientDataSetId)
-    }
+    let signature: string
 
-    const signature = await this.signer.signTypedData(
-      this.domain,
-      { DeleteProofSet: EIP712_TYPES.DeleteProofSet },
-      value
-    )
+    // Check if we should use MetaMask-friendly signing
+    const useMetaMask = await this.isMetaMaskSigner()
+
+    if (useMetaMask) {
+      // Use MetaMask-friendly signing for better UX
+      const value = {
+        clientDataSetId: clientDataSetId.toString() // Keep as string for MetaMask display
+      }
+
+      signature = await this.signWithMetaMask(
+        { DeleteProofSet: EIP712_TYPES.DeleteProofSet },
+        value
+      )
+    } else {
+      // Use standard ethers.js signing
+      const value = {
+        clientDataSetId: BigInt(clientDataSetId)
+      }
+
+      signature = await this.signer.signTypedData(
+        this.domain,
+        { DeleteProofSet: EIP712_TYPES.DeleteProofSet },
+        value
+      )
+    }
 
     const sig = ethers.Signature.from(signature)
 
@@ -349,7 +538,9 @@ export class PDPAuthHelper {
     const signedData = ethers.TypedDataEncoder.hash(
       this.domain,
       { DeleteProofSet: EIP712_TYPES.DeleteProofSet },
-      value
+      {
+        clientDataSetId: BigInt(clientDataSetId)
+      }
     )
 
     return {
