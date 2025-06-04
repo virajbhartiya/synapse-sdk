@@ -207,13 +207,19 @@ src/
 ├── storage-service.ts # MockStorageService implementation
 ├── upload-task.ts    # MockUploadTask implementation
 ├── constants.ts      # Network addresses, ABIs, and constants
+├── auth.ts           # AuthHelper for signing PDP operations with contract compatibility
 ├── commp/            # CommP (Piece Commitment) utilities
 │   ├── index.ts      # Re-exports CommP functions
 │   └── commp.ts      # CommP calculation and validation
-└── pdp/              # PDP (Proof of Data Possession) services
-    ├── index.ts      # Re-exports PDP services
-    ├── pdp-upload-service.ts   # PDPUploadService for uploading to PDP servers
-    └── pdp-download-service.ts # PDPDownloadService for retrieving from storage providers
+├── pdp/              # PDP (Proof of Data Possession) services
+│   ├── index.ts      # Re-exports PDP services
+│   ├── pdp-upload-service.ts   # PDPUploadService for uploading to PDP servers
+│   └── pdp-download-service.ts # PDPDownloadService for retrieving from storage providers
+└── test/             # Test suite
+    ├── auth.test.ts  # Auth signature compatibility tests vs Solidity contracts
+    ├── commp.test.ts # CommP utilities tests
+    ├── synapse.test.ts # Synapse class tests
+    └── pdp.test.ts   # PDP service tests
 ```
 
 ### Build Process
@@ -256,6 +262,97 @@ src/
 - **Sequential Transaction Processing**: Ensures transactions are sent with correct, sequential nonces
 - **Disable Option**: Can be disabled with `disableNonceManager: true` option if manual nonce management is preferred
 - **MetaMask Compatibility**: Works seamlessly with MetaMask and other browser wallets
+
+## CommPv2 Format and 32-Byte Digests
+
+**CRITICAL KNOWLEDGE**: Understanding CommPv2 is essential for proper contract integration. Reference: [FRC-0069](https://github.com/filecoin-project/FIPs/blob/master/FRCs/frc-0069.md)
+
+### CommPv2 Structure
+The new Piece Multihash CID format (CommPv2) has the structure:
+```
+uvarint padding | uint8 height | 32 byte root data
+```
+
+### Key Points
+1. **32-Byte Root Data**: The last 32 bytes represent the root of a binary merkle tree
+2. **Height Field**: Encodes the tree height, supporting pieces up to 32 GiB (height 30)
+3. **Size Information**: The format embeds size information directly in the CID
+4. **Contract Compatibility**: Solidity contracts expect only the 32-byte root digest
+
+### Implementation Details
+- **CommPv1 (Legacy)**: Uses fil-commitment-unsealed codec (0xf101) and sha2-256-trunc254-padded (0x1012)
+- **CommPv2 Extraction**: `digest.bytes.subarray(digest.bytes.length - 32)` extracts the 32-byte root
+- **Contract Encoding**: Solidity `PDPVerifier.RootData` expects the 32-byte digest, not the full CID
+
+### Why This Matters
+- Smart contracts work with 32-byte digests for efficiency and gas costs
+- The SDK must extract the correct 32-byte portion from CommPv2 for contract compatibility
+- Misunderstanding this structure leads to signature verification failures
+
+## Authentication Signature Compatibility
+
+The SDK implements cryptographic signatures for PDP operations that must be compatible with Solidity contract verification.
+
+### Signature Operations
+1. **CreateProofSet**: Creates a new proof set for a client dataset
+2. **AddRoots**: Adds CommP roots to an existing proof set
+3. **ScheduleRemovals**: Schedules removal of specific roots
+4. **DeleteProofSet**: Deletes an entire proof set
+
+### Critical Implementation Details
+
+#### AddRoots Encoding Challenge
+The most complex signature is AddRoots because it involves encoding `PDPVerifier.RootData[]`:
+
+**Solidity Contract Structure**:
+```solidity
+struct RootData {
+    Cids.Cid root;  // struct { bytes data; }
+    uint256 rawSize;
+}
+```
+
+**Key Insight**: `Cids.Cid` is not a `bytes32` but a `struct { bytes data; }`. The Solidity `cidFromDigest("", digest)` function creates a CID where the `data` field contains just the 32-byte digest.
+
+**Correct TypeScript Encoding**:
+```typescript
+// WRONG: tuple(bytes32,uint256)[]
+// CORRECT: tuple(tuple(bytes),uint256)[]
+const formattedRootData = rootDataArray.map(root => [
+  [digest], // tuple(bytes) - Cids.Cid struct with digest as data
+  BigInt(root.rawSize)
+])
+```
+
+#### MetaMask Signature Prefix
+- **Raw Signatures**: When using private keys directly, sign the raw message hash
+- **MetaMask Signatures**: Browser wallets add Ethereum message prefix automatically
+- **Contract Support**: Contracts can verify both raw and prefixed signatures
+
+### Testing Strategy
+- **Cross-Boundary Testing**: Tests verify TypeScript signatures against Solidity-generated references
+- **Forge Integration**: Uses `SignatureFixtureTest.t.sol` to generate reference signatures
+- **Bidirectional Verification**: Solidity verifies TypeScript signatures, TypeScript uses Solidity fixtures
+- **Fixed Test Data**: Uses hardcoded private key and contract addresses for deterministic testing
+
+### Common Pitfalls
+1. **Wrong Encoding**: Using `bytes32` instead of `tuple(bytes)` for `Cids.Cid`
+2. **CommP Confusion**: Using full CID bytes instead of extracted 32-byte digest
+3. **Signature Components**: Assuming `r` component format without proper testing
+4. **Contract Address**: Signatures are tied to specific contract addresses
+
+### AuthHelper Usage
+```typescript
+import { AuthHelper } from '@filoz/synapse-sdk'
+
+const authHelper = new AuthHelper(contractAddress, signer)
+
+// All operations return { signature, v, r, s, signedData }
+const createProofSetSig = await authHelper.signCreateProofSet(clientDataSetId, payee, withCDN)
+const addRootsSig = await authHelper.signAddRoots(clientDataSetId, firstRootId, rootDataArray)
+const scheduleRemovalsSig = await authHelper.signScheduleRemovals(clientDataSetId, rootIds)
+const deleteProofSetSig = await authHelper.signDeleteProofSet(clientDataSetId)
+```
 
 ### PDP Service Integration
 
