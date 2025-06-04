@@ -68,5 +68,5 @@ export const RPC_URLS = {
  */
 export const PDP_SERVICE_CONTRACT_ADDRESSES = {
   mainnet: '', // TODO: Get actual mainnet address from deployment
-  calibration: '0x2B76E983d30553E7717547230670D4F4F4d813aC'
+  calibration: '0x394feCa6bCB84502d93c0c5C03c620ba8897e8f4'
 } as const

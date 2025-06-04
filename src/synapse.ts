@@ -31,7 +31,7 @@ export class Synapse implements ISynapse {
   // Cached contract instances
   private _usdfcContract: ethers.Contract | null = null
   private _paymentsContract: ethers.Contract | null = null
-  private _pdpAuthHelper: PDPAuthHelper | null = null
+  private _pdpAuthHelpers: Map<string, PDPAuthHelper> | null = null
 
   // Static constant for USDFC token identifier
   static readonly USDFC = 'USDFC' as const
@@ -412,11 +412,17 @@ export class Synapse implements ISynapse {
    * proof sets, adding roots, scheduling removals, and deleting proof sets.
    * The instance is cached for performance.
    *
+   * @param contractAddress - Optional contract address (defaults to network's deployed contract)
    * @returns PDPAuthHelper instance for signing operations
    * @example
    * ```typescript
    * const synapse = await Synapse.create({ privateKey, rpcURL })
+   *
+   * // Use default contract address for current network
    * const auth = synapse.getPDPAuthHelper()
+   *
+   * // Or specify a custom contract address
+   * const authCustom = synapse.getPDPAuthHelper('0x1234...abcd')
    *
    * // Sign a proof set creation
    * const signature = await auth.signCreateProofSet(
@@ -426,18 +432,39 @@ export class Synapse implements ISynapse {
    * )
    * ```
    */
-  getPDPAuthHelper (): PDPAuthHelper {
-    if (this._pdpAuthHelper == null) {
-      const pdpServiceContractAddress = PDP_SERVICE_CONTRACT_ADDRESSES[this._network]
-      if (pdpServiceContractAddress === '') {
-        throw this._createError(
-          'getPDPAuthHelper',
-          `PDP service contract not deployed on ${this._network} network`
-        )
-      }
-      this._pdpAuthHelper = new PDPAuthHelper(pdpServiceContractAddress, this._signer)
+  getPDPAuthHelper (contractAddress?: string): PDPAuthHelper {
+    // Create a cache key that includes the contract address
+    const cacheKey = contractAddress ?? 'default'
+
+    if (this._pdpAuthHelpers == null) {
+      this._pdpAuthHelpers = new Map()
     }
-    return this._pdpAuthHelper
+
+    if (!this._pdpAuthHelpers.has(cacheKey)) {
+      let pdpServiceContractAddress: string
+
+      if (contractAddress != null) {
+        pdpServiceContractAddress = contractAddress
+      } else {
+        pdpServiceContractAddress = PDP_SERVICE_CONTRACT_ADDRESSES[this._network]
+        if (pdpServiceContractAddress === '') {
+          throw this._createError(
+            'getPDPAuthHelper',
+            `PDP service contract not deployed on ${this._network} network`
+          )
+        }
+      }
+
+      const chainId = BigInt(CHAIN_IDS[this._network])
+      const authHelper = new PDPAuthHelper(pdpServiceContractAddress, this._signer, chainId)
+      this._pdpAuthHelpers.set(cacheKey, authHelper)
+    }
+
+    const authHelper = this._pdpAuthHelpers.get(cacheKey)
+    if (authHelper == null) {
+      throw this._createError('getPDPAuthHelper', 'Failed to retrieve cached auth helper')
+    }
+    return authHelper
   }
 
   /**

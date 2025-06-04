@@ -143,17 +143,7 @@ export interface Synapse {
   getSignerAddress: () => Promise<string>
 
   /** Get PDPAuthHelper instance for signing operations */
-  getPDPAuthHelper: () => PDPAuthHelper
-}
-
-/**
- * Authentication operation types for Synapse
- */
-export enum Operation {
-  CreateProofSet = 0,
-  AddRoots = 1,
-  ScheduleRemovals = 2,
-  DeleteProofSet = 3
+  getPDPAuthHelper: (contractAddress?: string) => PDPAuthHelper
 }
 
 /**
