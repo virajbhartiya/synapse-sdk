@@ -41,8 +41,8 @@ const FIXTURES = {
       withCDN: true
     },
     addRoots: {
-      signature: '0xbb5e7ce8dd42685ea99f46ef35768050e7ea6f337ed654baf135bba6ee202b362ae87bad4afaa33313b22f41a2fce230d52a7f86b4eec0ca7ae920406800b4101c',
-      digest: '0xc79252c975205b30498a3943cdb4d85e9e8fa57d4b54a18280b136244c7832a8',
+      signature: '0xbc94f2d4a61d33025e6794405b6022bc091b7a6011aa5b5c1c9af70611091b641fb33c144bea0666fd28980999cc7e8749f29c25cef10ed075c69f3034df43bc1c',
+      digest: '0xeca924d5b1f71837d58bf8dd8c11a71a042d35e4804e8d1fbff282c5daa5cc2a',
       clientDataSetId: 12345,
       firstAdded: 1,
       rootDigests: [

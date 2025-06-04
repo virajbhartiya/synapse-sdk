@@ -291,7 +291,7 @@ uvarint padding | uint8 height | 32 byte root data
 
 ## Authentication Signature Compatibility
 
-The SDK implements cryptographic signatures for PDP operations that must be compatible with Solidity contract verification.
+The SDK implements EIP-712 typed signatures for PDP operations, compatible with Solidity contract verification and MetaMask.
 
 ### Signature Operations
 1. **CreateProofSet**: Creates a new proof set for a client dataset
@@ -299,69 +299,17 @@ The SDK implements cryptographic signatures for PDP operations that must be comp
 3. **ScheduleRemovals**: Schedules removal of specific roots
 4. **DeleteProofSet**: Deletes an entire proof set
 
-### Critical Implementation Details
+### Implementation Details
 
-#### AddRoots Encoding Challenge
-The most complex signature is AddRoots because it involves encoding `PDPVerifier.RootData[]`:
+All signatures use standard EIP-712 encoding via ethers.js `signTypedData`. The SDK automatically detects whether to use MetaMask-friendly signing (for browser wallets) or standard signing (for private keys).
 
-**Solidity Contract Structure**:
-```solidity
-struct RootData {
-    Cids.Cid root;  // struct { bytes data; }
-    uint256 rawSize;
-}
-```
+**Key Structure**: `Cids.Cid` in Solidity is a `struct { bytes data; }` containing the 32-byte CommP digest extracted from the CID.
 
-**Key Insight**: `Cids.Cid` is not a `bytes32` but a `struct { bytes data; }`. The Solidity `cidFromDigest("", digest)` function creates a CID where the `data` field contains just the 32-byte digest.
-
-**Correct TypeScript Encoding**:
+### PDPAuthHelper Usage
 ```typescript
-// WRONG: tuple(bytes32,uint256)[]
-// CORRECT: tuple(tuple(bytes),uint256)[]
-const formattedRootData = rootDataArray.map(root => [
-  [digest], // tuple(bytes) - Cids.Cid struct with digest as data
-  BigInt(root.rawSize)
-])
-```
+import { PDPAuthHelper } from '@filoz/synapse-sdk/pdp'
 
-#### MetaMask Signature Prefix
-- **Raw Signatures**: When using private keys directly, sign the raw message hash
-- **MetaMask Signatures**: Browser wallets add Ethereum message prefix automatically
-- **Contract Support**: Contracts can verify both raw and prefixed signatures
-
-### Critical Discovery: AddRoots EIP-712 Encoding Issue
-**IMPORTANT**: The AddRoots signature required manual implementation due to ethers.js incompatibility with Solidity's ABI encoding for dynamic arrays.
-
-**Root Cause**: `ethers.TypedDataEncoder` doesn't properly encode `RootData[]` arrays the same way as Solidity's `abi.encode()`:
-- TypeScript (ethers): Uses spread array encoding that produces packed concatenation
-- Solidity: Uses proper ABI encoding with length prefix and offset information
-
-**Solution**: Manual EIP-712 hash calculation that exactly replicates Solidity's algorithm:
-1. Calculate type hashes manually instead of relying on ethers
-2. Hash each RootData struct step-by-step (Cid → RootData → array element)
-3. Use `ethers.AbiCoder.defaultAbiCoder().encode(['bytes32[]'], [hashes])` for array encoding
-4. Sign the final EIP-712 digest directly with the wallet's private key
-
-**Limitation**: AddRoots signatures only work with `ethers.Wallet` (private key access required), not browser providers or external signers.
-
-### Testing Strategy
-- **Cross-Boundary Testing**: Tests verify TypeScript signatures against Solidity-generated references
-- **Forge Integration**: Uses `SignatureFixtureTest.t.sol` to generate reference signatures
-- **Bidirectional Verification**: Solidity verifies TypeScript signatures, TypeScript uses Solidity fixtures
-- **Fixed Test Data**: Uses hardcoded private key and contract addresses for deterministic testing
-
-### Common Pitfalls
-1. **Wrong Encoding**: Using `bytes32` instead of `tuple(bytes)` for `Cids.Cid`
-2. **CommP Confusion**: Using full CID bytes instead of extracted 32-byte digest
-3. **Signature Components**: Assuming `r` component format without proper testing
-4. **Contract Address**: Signatures are tied to specific contract addresses
-5. **Array Encoding**: ethers.js TypedDataEncoder doesn't match Solidity for dynamic arrays
-
-### AuthHelper Usage
-```typescript
-import { AuthHelper } from '@filoz/synapse-sdk'
-
-const authHelper = new AuthHelper(contractAddress, signer)
+const authHelper = new PDPAuthHelper(contractAddress, signer, chainId)
 
 // All operations return { signature, v, r, s, signedData }
 const createProofSetSig = await authHelper.signCreateProofSet(clientDataSetId, payee, withCDN)
@@ -369,6 +317,8 @@ const addRootsSig = await authHelper.signAddRoots(clientDataSetId, firstRootId, 
 const scheduleRemovalsSig = await authHelper.signScheduleRemovals(clientDataSetId, rootIds)
 const deleteProofSetSig = await authHelper.signDeleteProofSet(clientDataSetId)
 ```
+
+The AuthHelper can be obtained from a Synapse instance via `synapse.getPDPAuthHelper()` for convenience.
 
 ### PDP Service Integration
 

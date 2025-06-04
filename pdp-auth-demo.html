@@ -167,9 +167,7 @@
 
     <div class="container">
         <h2>2. Add Roots</h2>
-        <div class="info" style="margin-bottom: 15px;">
-            <strong>Note:</strong> AddRoots signatures work with MetaMask but will show a hex warning due to dynamic array encoding limitations in ethers.js. This is expected behavior.
-        </div>
+        <p style="color: #666; font-size: 14px;">MetaMask will display structured data: clientDataSetId, firstAdded, and rootData array with CommP CIDs and sizes</p>
         <div class="form-group">
             <label for="addClientDataSetId">Client Data Set ID:</label>
             <input type="text" id="addClientDataSetId" placeholder="12345" value="12345">
@@ -384,7 +382,7 @@
                     return;
                 }
 
-                showInfo('addRootsResult', 'Signing... MetaMask will show a hex warning - this is expected!');
+                showInfo('addRootsResult', 'Signing... Check MetaMask for structured data!');
                 
                 const result = await authHelper.signAddRoots(
                     clientDataSetId,
