@@ -133,6 +133,16 @@ export class PDPAuthHelper {
 
     const signerAddress = await this.signer.getAddress()
 
+    // Determine the primary type (the first one that isn't a dependency)
+    let primaryType = ''
+    for (const typeName of Object.keys(types)) {
+      // Skip Cid and RootData as they are dependencies
+      if (typeName !== 'Cid' && typeName !== 'RootData') {
+        primaryType = typeName
+        break
+      }
+    }
+
     // Construct the full typed data payload for MetaMask
     const typedData = {
       types: {
@@ -144,7 +154,7 @@ export class PDPAuthHelper {
         ],
         ...types
       },
-      primaryType: Object.keys(types)[0],
+      primaryType,
       domain: this.domain,
       message: value
     }
@@ -294,35 +304,8 @@ export class PDPAuthHelper {
     firstRootId: number | bigint,
     rootDataArray: RootData[]
   ): Promise<AuthSignature> {
-    // Check if we should use MetaMask-friendly signing
-    const useMetaMask = await this.isMetaMaskSigner()
-
-    if (useMetaMask) {
-      // For MetaMask, we need to keep the manual approach due to the array encoding issue
-      // But we'll sign using eth_sign to work with MetaMask
-      return await this.signAddRootsManually(clientDataSetId, firstRootId, rootDataArray)
-    }
-
-    // For private key signers, also use manual approach for compatibility
-    return await this.signAddRootsManually(clientDataSetId, firstRootId, rootDataArray)
-  }
-
-  /**
-   * Manual implementation of AddRoots signature to match Solidity exactly
-   * This is necessary due to ethers.js incompatibility with dynamic array encoding
-   */
-  private async signAddRootsManually (
-    clientDataSetId: number | bigint,
-    firstRootId: number | bigint,
-    rootDataArray: RootData[]
-  ): Promise<AuthSignature> {
-    // Step 1: Calculate type hashes
-    const cidTypeHash = ethers.keccak256(ethers.toUtf8Bytes('Cid(bytes data)'))
-    const rootDataTypeHash = ethers.keccak256(ethers.toUtf8Bytes('RootData(Cid root,uint256 rawSize)Cid(bytes data)'))
-    const addRootsTypeHash = ethers.keccak256(ethers.toUtf8Bytes('AddRoots(uint256 clientDataSetId,uint256 firstAdded,RootData[] rootData)RootData(Cid root,uint256 rawSize)Cid(bytes data)'))
-
-    // Step 2: Calculate individual RootData hashes (mimicking Solidity exactly)
-    const rootDataHashes = []
+    // Transform the root data into the proper format for EIP-712
+    const formattedRootData = []
     for (const root of rootDataArray) {
       const commP = typeof root.cid === 'string' ? asCommP(root.cid) : root.cid
       if (commP == null) {
@@ -334,62 +317,76 @@ export class PDPAuthHelper {
         throw new Error(`Expected 32-byte digest, got ${digest.length} bytes`)
       }
 
-      // Hash the data first: keccak256(rootDataArray[i].root.data)
-      const cidDataHash = ethers.keccak256(digest)
-
-      // Hash the Cid struct: keccak256(abi.encode(CID_TYPEHASH, keccak256(data)))
-      const cidStructHash = ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(
-        ['bytes32', 'bytes32'],
-        [cidTypeHash, cidDataHash]
-      ))
-
-      // Hash the RootData struct: keccak256(abi.encode(ROOTDATA_TYPEHASH, cidStructHash, rawSize))
-      const rootDataStructHash = ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(
-        ['bytes32', 'bytes32', 'uint256'],
-        [rootDataTypeHash, cidStructHash, BigInt(root.rawSize)]
-      ))
-
-      rootDataHashes.push(rootDataStructHash)
+      // Format as nested structure matching Solidity's Cids.Cid struct
+      formattedRootData.push({
+        root: {
+          data: digest // This will be a Uint8Array
+        },
+        rawSize: BigInt(root.rawSize)
+      })
     }
 
-    // Step 3: Calculate array hash using correct Solidity encoding
-    const arrayHash = ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(
-      ['bytes32[]'],
-      [rootDataHashes]
-    ))
-
-    // Step 4: Calculate final struct hash
-    const structHash = ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(
-      ['bytes32', 'uint256', 'uint256', 'bytes32'],
-      [addRootsTypeHash, BigInt(clientDataSetId), BigInt(firstRootId), arrayHash]
-    ))
-
-    // Step 5: Calculate domain separator and final hash
-    const domainSeparator = ethers.TypedDataEncoder.hashDomain(this.domain)
-    const signedData = ethers.keccak256(ethers.concat([
-      '0x1901',
-      domainSeparator,
-      structHash
-    ]))
-
-    // Step 6: Sign the hash
     let signature: string
-    let sig: ethers.Signature
 
-    if ('signingKey' in this.signer && this.signer.signingKey != null) {
-      // Direct access to signing key (Wallet)
-      const signingKey = this.signer.signingKey as any
-      sig = signingKey.sign(signedData)
-      signature = sig.serialized
-    } else if (await this.isMetaMaskSigner()) {
-      // For MetaMask, use eth_sign (will show a warning but works)
-      const provider = this.signer.provider as any
-      const address = await this.signer.getAddress()
-      signature = await provider.send('eth_sign', [address.toLowerCase(), signedData])
-      sig = ethers.Signature.from(signature)
+    // Check if we should use MetaMask-friendly signing
+    const useMetaMask = await this.isMetaMaskSigner()
+
+    if (useMetaMask) {
+      // Use MetaMask-friendly signing with properly structured data
+      const value = {
+        clientDataSetId: clientDataSetId.toString(), // Keep as string for MetaMask display
+        firstAdded: firstRootId.toString(), // Keep as string for MetaMask display
+        rootData: formattedRootData.map(item => ({
+          root: {
+            data: ethers.hexlify(item.root.data) // Convert Uint8Array to hex string for MetaMask
+          },
+          rawSize: item.rawSize.toString() // Keep as string for MetaMask display
+        }))
+      }
+
+      // Define the complete type structure
+      const types = {
+        AddRoots: EIP712_TYPES.AddRoots,
+        RootData: EIP712_TYPES.RootData,
+        Cid: EIP712_TYPES.Cid
+      }
+
+      signature = await this.signWithMetaMask(types, value)
     } else {
-      throw new Error('AddRoots signature generation requires a Wallet or MetaMask signer.')
+      // Use standard ethers.js signing with bigint values
+      const value = {
+        clientDataSetId: BigInt(clientDataSetId),
+        firstAdded: BigInt(firstRootId),
+        rootData: formattedRootData
+      }
+
+      // Define the complete type structure
+      const types = {
+        AddRoots: EIP712_TYPES.AddRoots,
+        RootData: EIP712_TYPES.RootData,
+        Cid: EIP712_TYPES.Cid
+      }
+
+      signature = await this.signer.signTypedData(this.domain, types, value)
     }
+
+    // Return signature with components
+    const sig = ethers.Signature.from(signature)
+
+    // For EIP-712, signedData contains the actual message hash that was signed
+    const signedData = ethers.TypedDataEncoder.hash(
+      this.domain,
+      {
+        AddRoots: EIP712_TYPES.AddRoots,
+        RootData: EIP712_TYPES.RootData,
+        Cid: EIP712_TYPES.Cid
+      },
+      {
+        clientDataSetId: BigInt(clientDataSetId),
+        firstAdded: BigInt(firstRootId),
+        rootData: formattedRootData
+      }
+    )
 
     return {
       signature,
