@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDP Auth Signature Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        h2 {
+            color: #555;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #666;
+        }
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        input[type="checkbox"] {
+            margin-right: 5px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .connect-button {
+            background-color: #ff6600;
+        }
+        .connect-button:hover {
+            background-color: #e55500;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .error {
+            color: #d32f2f;
+            background-color: #ffebee;
+            border-color: #f44336;
+        }
+        .success {
+            color: #2e7d32;
+            background-color: #e8f5e9;
+            border-color: #4caf50;
+        }
+        .info {
+            color: #1976d2;
+            background-color: #e3f2fd;
+            border-color: #2196f3;
+        }
+        .root-entry {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            background-color: #fafafa;
+        }
+        .status {
+            margin-bottom: 20px;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .connected {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        .disconnected {
+            background-color: #ffebee;
+            color: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+    <h1>PDP Auth Signature Demo</h1>
+    
+    <div class="container">
+        <div id="status" class="status disconnected">
+            Not connected to MetaMask
+        </div>
+        <button id="connectWallet" class="connect-button">Connect MetaMask</button>
+        <div id="accountInfo"></div>
+    </div>
+
+    <div class="container">
+        <h2>Configuration</h2>
+        <div class="form-group">
+            <label for="contractAddress">Contract Address:</label>
+            <input type="text" id="contractAddress" placeholder="0x..." value="">
+        </div>
+        <div class="form-group">
+            <label for="network">Network:</label>
+            <select id="network">
+                <option value="314159">Calibration Testnet (314159)</option>
+                <option value="314">Mainnet (314)</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>1. Create Proof Set</h2>
+        <div class="form-group">
+            <label for="createClientDataSetId">Client Data Set ID:</label>
+            <input type="text" id="createClientDataSetId" placeholder="my-dataset-123">
+        </div>
+        <div class="form-group">
+            <label for="createPayee">Payee Address:</label>
+            <input type="text" id="createPayee" placeholder="0x...">
+        </div>
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="createWithCDN">
+                With CDN
+            </label>
+        </div>
+        <button id="signCreateProofSet">Sign Create Proof Set</button>
+        <div id="createProofSetResult"></div>
+    </div>
+
+    <div class="container">
+        <h2>2. Add Roots</h2>
+        <div class="error" style="margin-bottom: 15px;">
+            <strong>Note:</strong> AddRoots signatures currently only work with private key wallets (not MetaMask or hardware wallets) due to EIP-712 encoding complexities.
+        </div>
+        <div class="form-group">
+            <label for="addClientDataSetId">Client Data Set ID:</label>
+            <input type="text" id="addClientDataSetId" placeholder="my-dataset-123">
+        </div>
+        <div class="form-group">
+            <label for="addFirstRootId">First Root ID:</label>
+            <input type="number" id="addFirstRootId" placeholder="0">
+        </div>
+        <div id="rootsContainer">
+            <h3>Root Data Entries</h3>
+            <div id="rootEntries"></div>
+            <button id="addRootEntry">Add Root Entry</button>
+        </div>
+        <button id="signAddRoots">Sign Add Roots</button>
+        <div id="addRootsResult"></div>
+    </div>
+
+    <div class="container">
+        <h2>3. Schedule Removals</h2>
+        <div class="form-group">
+            <label for="removeClientDataSetId">Client Data Set ID:</label>
+            <input type="text" id="removeClientDataSetId" placeholder="my-dataset-123">
+        </div>
+        <div class="form-group">
+            <label for="removeRootIds">Root IDs (comma-separated):</label>
+            <input type="text" id="removeRootIds" placeholder="0,1,2">
+        </div>
+        <button id="signScheduleRemovals">Sign Schedule Removals</button>
+        <div id="scheduleRemovalsResult"></div>
+    </div>
+
+    <div class="container">
+        <h2>4. Delete Proof Set</h2>
+        <div class="form-group">
+            <label for="deleteClientDataSetId">Client Data Set ID:</label>
+            <input type="text" id="deleteClientDataSetId" placeholder="my-dataset-123">
+        </div>
+        <button id="signDeleteProofSet">Sign Delete Proof Set</button>
+        <div id="deleteProofSetResult"></div>
+    </div>
+
+    <!-- Load ethers and SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6/dist/ethers.umd.min.js"></script>
+    <script src="dist/browser/synapse-sdk.min.js"></script>
+    
+    <script>
+        let provider = null;
+        let signer = null;
+        let authHelper = null;
+        let rootDataEntries = [];
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set default contract addresses
+            const networkSelect = document.getElementById('network');
+            updateContractAddress();
+            networkSelect.addEventListener('change', updateContractAddress);
+            
+            // Add initial root entry
+            addRootDataEntry();
+        });
+
+        function updateContractAddress() {
+            const network = document.getElementById('network').value;
+            const contractInput = document.getElementById('contractAddress');
+            
+            if (network === '314159') {
+                // Calibration testnet - use ethers to get checksummed address
+                contractInput.value = ethers.getAddress('0x20458cba48256e64e0da8f4a69e97be6af721bd6');
+            } else if (network === '314') {
+                // Mainnet - use ethers to get checksummed address
+                contractInput.value = ethers.getAddress('0x1f16163f77970a9afc2615ec4957020a5cdae76c');
+            }
+        }
+
+        // Connect wallet button
+        document.getElementById('connectWallet').addEventListener('click', async () => {
+            try {
+                if (typeof window.ethereum === 'undefined') {
+                    showError('status', 'MetaMask is not installed!');
+                    return;
+                }
+
+                provider = new ethers.BrowserProvider(window.ethereum);
+                await provider.send("eth_requestAccounts", []);
+                signer = await provider.getSigner();
+                
+                const address = await signer.getAddress();
+                const network = await provider.getNetwork();
+                
+                document.getElementById('status').className = 'status connected';
+                document.getElementById('status').textContent = 'Connected to MetaMask';
+                document.getElementById('accountInfo').innerHTML = `
+                    <div class="info" style="margin-top: 10px;">
+                        <strong>Account:</strong> ${address}<br>
+                        <strong>Chain ID:</strong> ${network.chainId}
+                    </div>
+                `;
+                
+                // Initialize AuthHelper
+                const contractAddress = document.getElementById('contractAddress').value;
+                if (contractAddress) {
+                    authHelper = new SynapseSDK.PDPAuthHelper(contractAddress, signer);
+                }
+            } catch (error) {
+                showError('status', 'Failed to connect: ' + error.message);
+            }
+        });
+
+        // Update AuthHelper when contract address changes
+        document.getElementById('contractAddress').addEventListener('change', () => {
+            if (signer) {
+                const contractAddress = document.getElementById('contractAddress').value;
+                if (contractAddress) {
+                    authHelper = new SynapseSDK.PDPAuthHelper(contractAddress, signer);
+                }
+            }
+        });
+
+        // Root data entry management
+        function addRootDataEntry() {
+            const container = document.getElementById('rootEntries');
+            const index = rootDataEntries.length;
+            
+            const entry = document.createElement('div');
+            entry.className = 'root-entry';
+            entry.innerHTML = `
+                <div class="form-group">
+                    <label>Root ${index + 1} - CommP CID:</label>
+                    <input type="text" id="rootCid${index}" placeholder="baga6ea4seaqao7s73y24kcutaosvacpdjgfe5pw76ooefnyqw4ynr3d2y6x2mpq" style="margin-bottom: 10px;">
+                    <label>Raw Size:</label>
+                    <input type="number" id="rootSize${index}" placeholder="1024">
+                </div>
+            `;
+            
+            container.appendChild(entry);
+            rootDataEntries.push(index);
+        }
+
+        document.getElementById('addRootEntry').addEventListener('click', addRootDataEntry);
+
+        // Sign Create Proof Set
+        document.getElementById('signCreateProofSet').addEventListener('click', async () => {
+            try {
+                if (!authHelper) {
+                    showError('createProofSetResult', 'Please connect MetaMask and set contract address first');
+                    return;
+                }
+
+                const clientDataSetId = document.getElementById('createClientDataSetId').value;
+                const payee = document.getElementById('createPayee').value;
+                const withCDN = document.getElementById('createWithCDN').checked;
+
+                if (!clientDataSetId || !payee) {
+                    showError('createProofSetResult', 'Please fill in all fields');
+                    return;
+                }
+
+                showInfo('createProofSetResult', 'Signing...');
+                
+                const result = await authHelper.signCreateProofSet(clientDataSetId, payee, withCDN);
+                
+                showSuccess('createProofSetResult', formatSignature(result));
+            } catch (error) {
+                showError('createProofSetResult', 'Error: ' + error.message);
+            }
+        });
+
+        // Sign Add Roots
+        document.getElementById('signAddRoots').addEventListener('click', async () => {
+            try {
+                if (!authHelper) {
+                    showError('addRootsResult', 'Please connect MetaMask and set contract address first');
+                    return;
+                }
+
+                const clientDataSetId = document.getElementById('addClientDataSetId').value;
+                const firstRootId = document.getElementById('addFirstRootId').value;
+
+                if (!clientDataSetId || !firstRootId) {
+                    showError('addRootsResult', 'Please fill in client data set ID and first root ID');
+                    return;
+                }
+
+                // Collect root data
+                const rootDataArray = [];
+                for (let i = 0; i < rootDataEntries.length; i++) {
+                    const cid = document.getElementById(`rootCid${i}`).value;
+                    const rawSize = document.getElementById(`rootSize${i}`).value;
+                    
+                    if (cid && rawSize) {
+                        rootDataArray.push({
+                            cid: cid,
+                            rawSize: parseInt(rawSize)
+                        });
+                    }
+                }
+
+                if (rootDataArray.length === 0) {
+                    showError('addRootsResult', 'Please add at least one root entry');
+                    return;
+                }
+
+                showInfo('addRootsResult', 'Signing...');
+                
+                const result = await authHelper.signAddRoots(
+                    clientDataSetId,
+                    BigInt(firstRootId),
+                    rootDataArray
+                );
+                
+                showSuccess('addRootsResult', formatSignature(result));
+            } catch (error) {
+                showError('addRootsResult', 'Error: ' + error.message);
+            }
+        });
+
+        // Sign Schedule Removals
+        document.getElementById('signScheduleRemovals').addEventListener('click', async () => {
+            try {
+                if (!authHelper) {
+                    showError('scheduleRemovalsResult', 'Please connect MetaMask and set contract address first');
+                    return;
+                }
+
+                const clientDataSetId = document.getElementById('removeClientDataSetId').value;
+                const rootIdsStr = document.getElementById('removeRootIds').value;
+
+                if (!clientDataSetId || !rootIdsStr) {
+                    showError('scheduleRemovalsResult', 'Please fill in all fields');
+                    return;
+                }
+
+                const rootIds = rootIdsStr.split(',').map(id => BigInt(id.trim()));
+
+                showInfo('scheduleRemovalsResult', 'Signing...');
+                
+                const result = await authHelper.signScheduleRemovals(clientDataSetId, rootIds);
+                
+                showSuccess('scheduleRemovalsResult', formatSignature(result));
+            } catch (error) {
+                showError('scheduleRemovalsResult', 'Error: ' + error.message);
+            }
+        });
+
+        // Sign Delete Proof Set
+        document.getElementById('signDeleteProofSet').addEventListener('click', async () => {
+            try {
+                if (!authHelper) {
+                    showError('deleteProofSetResult', 'Please connect MetaMask and set contract address first');
+                    return;
+                }
+
+                const clientDataSetId = document.getElementById('deleteClientDataSetId').value;
+
+                if (!clientDataSetId) {
+                    showError('deleteProofSetResult', 'Please fill in client data set ID');
+                    return;
+                }
+
+                showInfo('deleteProofSetResult', 'Signing...');
+                
+                const result = await authHelper.signDeleteProofSet(clientDataSetId);
+                
+                showSuccess('deleteProofSetResult', formatSignature(result));
+            } catch (error) {
+                showError('deleteProofSetResult', 'Error: ' + error.message);
+            }
+        });
+
+        // Helper functions
+        function formatSignature(result) {
+            return `
+                <strong>Signature (hex):</strong><br>
+                ${result.signature}<br><br>
+                <strong>Components:</strong><br>
+                v: ${result.v}<br>
+                r: ${result.r}<br>
+                s: ${result.s}<br><br>
+                <strong>Signed Data (hex):</strong><br>
+                ${result.signedData}
+            `;
+        }
+
+        function showError(elementId, message) {
+            document.getElementById(elementId).innerHTML = `<div class="result error">${message}</div>`;
+        }
+
+        function showSuccess(elementId, message) {
+            document.getElementById(elementId).innerHTML = `<div class="result success">${message}</div>`;
+        }
+
+        function showInfo(elementId, message) {
+            document.getElementById(elementId).innerHTML = `<div class="result info">${message}</div>`;
+        }
+    </script>
+</body>
+</html>
