@@ -192,7 +192,8 @@ Adapter implementations (not part of core) provide:
 - ✅ Contract instance caching for efficiency
 - ✅ Browser examples with HTML demos
 - ✅ Comprehensive API documentation in README
-- ✅ Test suite
+- ✅ Test suite with cross-boundary signature compatibility testing
+- ✅ Auth signature generation compatible with Solidity contracts
 - ✅ Browser bundle generation via webpack (UMD and ESM format)
 - 🚧 Mock storage service (real implementation pending)
 - ⏳ Documentation website pending

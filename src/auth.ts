@@ -59,16 +59,17 @@ export class AuthHelper {
         throw new Error(`Invalid CommP: ${String(root.cid)}`)
       }
 
-      // Contract expects PDPVerifier.RootData[] which is tuple(bytes32,uint256)[]
-      // We need to extract just the 32-byte digest from the CommP multihash
-      // The multihash digest is the actual piece commitment root
+      // Contract expects PDPVerifier.RootData[] which is tuple(Cids.Cid,uint256)[]
+      // where Cids.Cid is struct { bytes data; }
+      // The Solidity code uses cidFromDigest("", digest) which creates a Cid with
+      // just the 32-byte digest as the data (no prefix)
       const digest = commP.multihash.digest
       if (digest.length !== 32) {
         throw new Error(`Expected 32-byte digest, got ${digest.length} bytes`)
       }
 
       return [
-        digest, // bytes32 - just the 32-byte digest
+        [digest], // tuple(bytes) - Cids.Cid struct with digest as data
         BigInt(root.rawSize) // uint256 - raw size
       ]
     })
@@ -78,10 +79,10 @@ export class AuthHelper {
       Operation.AddRoots, // uint8
       BigInt(clientDataSetId), // uint256
       BigInt(firstRootId), // uint256
-      formattedRootData // tuple(bytes32,uint256)[]
+      formattedRootData // tuple(tuple(bytes),uint256)[]
     ]
 
-    const types = ['address', 'uint8', 'uint256', 'uint256', 'tuple(bytes32,uint256)[]']
+    const types = ['address', 'uint8', 'uint256', 'uint256', 'tuple(tuple(bytes),uint256)[]']
     return await this._signData(data, types)
   }
 
