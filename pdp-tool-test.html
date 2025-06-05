@@ -576,7 +576,7 @@ You can now check the status to see when it's confirmed on-chain.`, 'success')
                 showStatus('Signing and sending add roots request...', 'info')
 
                 // Add roots using the SDK's PDPTool
-                console.log('PDPTool instance:', pdpTool)
+                console.log('Auth helper :', authHelper)
                 const result = await pdpTool.addRoots(proofSetId, clientDataSetId, nextRootId, rootDataArray)
                 
                 showStatus(`Roots added successfully!

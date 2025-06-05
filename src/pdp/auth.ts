@@ -3,6 +3,7 @@
  */
 
 import { ethers } from 'ethers'
+import * as sigUtil from 'eth-sig-util'
 import { type AuthSignature, type RootData } from '../types.js'
 import { asCommP } from '../commp/index.js'
 
@@ -299,6 +300,58 @@ export class PDPAuthHelper {
    * )
    * ```
    */
+
+  private debugAddRootsHashes(
+    domain: ethers.TypedDataDomain,
+    types: Record<string, Array<{ name: string, type: string }>>,
+    value: any,
+    formattedRootData: any[]
+  ): void {
+    console.log('\n=== AddRoots EIP-712 Debug ===')
+    
+    // 1. Domain Separator
+    const domainSeparator = ethers.TypedDataEncoder.hashDomain(domain)
+    console.log('Domain Separator:', domainSeparator)
+    
+    // 2. Individual Root Data Hashes (matching Solidity logic)
+    const rootDataHashes = formattedRootData.map((item, index) => {
+      const cidHash = ethers.keccak256(
+        ethers.AbiCoder.defaultAbiCoder().encode(
+          ['bytes32', 'bytes'],
+          [ethers.keccak256(ethers.toUtf8Bytes('Cid(bytes data)')), ethers.keccak256(item.root.data)]
+        )
+      )
+      
+      const rootDataHash = ethers.keccak256(
+        ethers.AbiCoder.defaultAbiCoder().encode(
+          ['bytes32', 'bytes32', 'uint256'],
+          [
+            ethers.keccak256(ethers.toUtf8Bytes('RootData(Cid root,uint256 rawSize)Cid(bytes data)')),
+            cidHash,
+            item.rawSize
+          ]
+        )
+      )
+      
+      console.log(`Root ${index} - CID: ${ethers.hexlify(item.root.data)}, Size: ${item.rawSize}, Hash: ${rootDataHash}`)
+      return rootDataHash
+    })
+    
+    // 3. Combined Root Data Hash
+    const combinedRootDataHash = ethers.keccak256(ethers.concat(rootDataHashes))
+    console.log('Combined Root Data Hash:', combinedRootDataHash)
+    
+    // 4. Struct Hash
+    const structHash = ethers.TypedDataEncoder.hashStruct('AddRoots', types, value)
+    console.log('Struct Hash:', structHash)
+    
+    // 5. Final Digest
+    const digest = ethers.TypedDataEncoder.hash(domain, types, value)
+    console.log('Final Digest:', digest)
+    
+    console.log('=== End Debug ===\n')
+  }
+
   async signAddRoots (
     clientDataSetId: number | bigint,
     firstRootId: number | bigint,
@@ -330,7 +383,7 @@ export class PDPAuthHelper {
 
     // Check if we should use MetaMask-friendly signing
     const useMetaMask = await this.isMetaMaskSigner()
-
+    
     if (useMetaMask) {
       // Use MetaMask-friendly signing with properly structured data
       const value = {
@@ -350,6 +403,7 @@ export class PDPAuthHelper {
         RootData: EIP712_TYPES.RootData,
         Cid: EIP712_TYPES.Cid
       }
+      this.debugAddRootsHashes(this.domain, types, value, formattedRootData)
 
       signature = await this.signWithMetaMask(types, value)
     } else {
@@ -366,6 +420,11 @@ export class PDPAuthHelper {
         RootData: EIP712_TYPES.RootData,
         Cid: EIP712_TYPES.Cid
       }
+      console.log('types', types)
+      console.log('value', value)
+      console.log('domain', this.domain)
+
+      this.debugAddRootsHashes(this.domain, types, value, formattedRootData)
 
       signature = await this.signer.signTypedData(this.domain, types, value)
     }
@@ -387,7 +446,7 @@ export class PDPAuthHelper {
         rootData: formattedRootData
       }
     )
-
+    console.log('signature', signature)
     return {
       signature,
       v: sig.v,
