@@ -4,6 +4,8 @@
 
 import { ethers } from 'ethers'
 import type { PDPAuthHelper } from './auth.js'
+import type { RootData } from '../types.js'
+
 
 /**
  * Response from creating a proof set
@@ -31,6 +33,42 @@ export interface ProofSetCreationStatusResponse {
   ok: boolean | null
   /** On-chain proof set ID (only available after creation) */
   proofSetId?: number
+}
+
+/**
+ * Request structure for adding a root to a proof set
+ */
+export interface AddRootRequest {
+  /** Root CID */
+  rootCid: string
+  /** Array of subroot entries */
+  subroots: SubrootEntry[]
+}
+
+/**
+ * Subroot entry structure
+ */
+export interface SubrootEntry {
+  /** Subroot CID */
+  subrootCid: string
+}
+
+/**
+ * Payload for adding roots to a proof set
+ */
+export interface AddRootsPayload {
+  /** Array of root requests */
+  roots: AddRootRequest[]
+  /** Optional extra data as hex string */
+  extraData?: string
+}
+
+/**
+ * Response from adding roots to a proof set
+ */
+export interface AddRootsResponse {
+  /** Success message or response data */
+  message: string
 }
 
 /**
@@ -148,6 +186,89 @@ export class PDPTool {
 
     return await response.json() as ProofSetCreationStatusResponse
   }
+
+  /**
+ * Add roots to an existing proof set
+ * @param proofSetId - ID of the proof set to add roots to
+ * @param clientDataSetId - Unique ID for the client's dataset
+ * @param nextRootId - The next root ID for this proof set
+ * @param rootDataArray - Array of root data containing CID and raw size
+ * @returns Promise that resolves with the response
+ */
+async addRoots (
+  proofSetId: number,
+  clientDataSetId: number,
+  nextRootId: number,
+  rootDataArray: RootData[]
+): Promise<AddRootsResponse> {
+  // Generate the EIP-712 signature for adding roots
+  const authData = await this.pdpAuthHelper.signAddRoots(clientDataSetId, nextRootId, rootDataArray)
+
+  // Prepare the extra data for the contract call
+  const extraData = this._encodeAddRootsData({
+    metadata: "",
+    signature: authData.signature
+  })
+
+  // Convert RootData array to AddRootRequest format
+  const addRootRequests: AddRootRequest[] = rootDataArray.map(rootData => ({
+    rootCid: typeof rootData.cid === 'string' ? rootData.cid : rootData.cid.toString(),
+    subroots: [
+      {
+        subrootCid: typeof rootData.cid === 'string' ? rootData.cid : rootData.cid.toString()
+      }
+    ]
+  }))
+
+  // Construct request payload
+  const payload: AddRootsPayload = {
+    roots: addRootRequests,
+    extraData: `0x${extraData}`
+  }
+
+  // Make the POST request
+  const response = await fetch(`${this.apiEndpoint}/pdp/proof-sets/${proofSetId}/roots`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+      // No Authorization header needed (null authentication as per handlers.go)
+    },
+    body: JSON.stringify(payload)
+  })
+
+  if (response.status !== 201) {
+    const errorText = await response.text()
+    throw new Error(`Failed to add roots: ${response.status} ${response.statusText} - ${errorText}`)
+  }
+
+  const responseText = await response.text()
+  return {
+    message: responseText || `Roots added to proof set ID ${proofSetId} successfully`
+  }
+}
+
+/**
+ * Encode AddRootsData for extraData field
+ * This matches the expected structure for adding roots to a proof set
+ */
+private _encodeAddRootsData (data: {
+  metadata: string
+  signature: string
+}): string {
+  // Ensure signature has 0x prefix
+  const signature = data.signature.startsWith('0x') ? data.signature : `0x${data.signature}`
+
+  // ABI encode the struct as a tuple
+  const abiCoder = ethers.AbiCoder.defaultAbiCoder()
+  const encoded = abiCoder.encode(
+    ['bytes', 'string'],
+    [signature, data.metadata]
+  )
+
+  // Return hex string without 0x prefix (since we add it in the calling code)
+  return encoded.slice(2)
+}
+
 
   /**
    * Get the API endpoint

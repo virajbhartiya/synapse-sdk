@@ -7,7 +7,7 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 800px;
+            max-width: 1000px;
             margin: 0 auto;
             padding: 20px;
             background-color: #f5f5f5;
@@ -22,6 +22,13 @@
             color: #333;
             text-align: center;
             margin-bottom: 30px;
+        }
+        h2 {
+            color: #444;
+            border-bottom: 2px solid #007cba;
+            padding-bottom: 10px;
+            margin-top: 40px;
+            margin-bottom: 20px;
         }
         .form-group {
             margin-bottom: 20px;
@@ -109,6 +116,37 @@
             color: #666;
             margin-top: 5px;
         }
+        .section {
+            margin-bottom: 40px;
+            padding: 20px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+        }
+        .root-entry {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            background-color: #fafafa;
+        }
+        .root-entry h4 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .add-root-btn, .remove-root-btn {
+            background-color: #28a745;
+            font-size: 14px;
+            padding: 5px 10px;
+        }
+        .remove-root-btn {
+            background-color: #dc3545;
+        }
+        .add-root-btn:hover {
+            background-color: #218838;
+        }
+        .remove-root-btn:hover {
+            background-color: #c82333;
+        }
     </style>
 </head>
 <body>
@@ -147,30 +185,82 @@
             <div class="help-text">Address of the SimplePDPServiceWithPayments contract</div>
         </div>
 
-        <div class="form-group">
-            <label for="payee">Storage Provider Address:</label>
-            <input type="text" id="payee" value="0x78bF4d833fC2ba1Abd42Bc772edbC788EC76A28F" />
-            <div class="help-text">Address of the storage provider that will receive payments</div>
+        <!-- CREATE PROOF SET SECTION -->
+        <div class="section">
+            <h2>Create Proof Set</h2>
+
+            <div class="form-group">
+                <label for="payee">Storage Provider Address:</label>
+                <input type="text" id="payee" value="0x78bF4d833fC2ba1Abd42Bc772edbC788EC76A28F" />
+                <div class="help-text">Address of the storage provider that will receive payments</div>
+            </div>
+
+            <div class="form-group">
+                <label for="clientDataSetId">Client Dataset ID:</label>
+                <input type="number" id="clientDataSetId" value="0" />
+                <div class="help-text">Unique identifier for your dataset (usually 0 for first dataset)</div>
+            </div>
+
+            <div class="form-group">
+                <label for="withCDN">Enable CDN:</label>
+                <select id="withCDN">
+                    <option value="false">No</option>
+                    <option value="true">Yes</option>
+                </select>
+                <div class="help-text">Whether to enable CDN services for faster retrieval</div>
+            </div>
+
+            <div class="form-group">
+                <button id="createProofSetBtn" disabled>Create Proof Set</button>
+                <button id="checkStatusBtn" disabled>Check Status</button>
+            </div>
         </div>
 
-        <div class="form-group">
-            <label for="clientDataSetId">Client Dataset ID:</label>
-            <input type="number" id="clientDataSetId" value="0" />
-            <div class="help-text">Unique identifier for your dataset (usually 0 for first dataset)</div>
-        </div>
+        <!-- ADD ROOTS SECTION -->
+        <div class="section">
+            <h2>Add Roots to Proof Set</h2>
 
-        <div class="form-group">
-            <label for="withCDN">Enable CDN:</label>
-            <select id="withCDN">
-                <option value="false">No</option>
-                <option value="true">Yes</option>
-            </select>
-            <div class="help-text">Whether to enable CDN services for faster retrieval</div>
-        </div>
+            <div class="form-group">
+                <label for="addRootsProofSetId">Proof Set ID:</label>
+                <input type="number" id="addRootsProofSetId" value="" />
+                <div class="help-text">ID of the existing proof set to add roots to</div>
+            </div>
 
-        <div class="form-group">
-            <button id="createProofSetBtn">Create Proof Set</button>
-            <button id="checkStatusBtn" disabled>Check Status</button>
+            <div class="form-group">
+                <label for="addRootsClientDataSetId">Client Dataset ID:</label>
+                <input type="number" id="addRootsClientDataSetId" value="0" />
+                <div class="help-text">Unique identifier for your dataset (should match the proof set)</div>
+            </div>
+
+            <div class="form-group">
+                <label for="nextRootId">Next Root ID:</label>
+                <input type="number" id="nextRootId" value="0" />
+                <div class="help-text">The next root ID for this proof set (usually starts at 0)</div>
+            </div>
+
+            <div class="form-group">
+                <label>Root Data Entries:</label>
+                <div class="help-text">Add the root CIDs and their raw data sizes to include in the proof set</div>
+                <div id="rootEntries">
+                    <div class="root-entry">
+                        <h4>Root Entry 1</h4>
+                        <div style="margin-bottom: 10px;">
+                            <label>Root CID:</label>
+                            <input type="text" class="root-cid" placeholder="baga6ea4seaqj..." />
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <label>Raw Size (bytes):</label>
+                            <input type="number" class="root-size" placeholder="1048576" />
+                        </div>
+                        <button type="button" class="remove-root-btn" onclick="removeRootEntry(this)">Remove</button>
+                    </div>
+                </div>
+                <button type="button" class="add-root-btn" onclick="addRootEntry()">Add Another Root</button>
+            </div>
+
+            <div class="form-group">
+                <button id="addRootsBtn" disabled>Add Roots</button>
+            </div>
         </div>
 
         <div id="status" class="status info" style="display: none;"></div>
@@ -200,6 +290,7 @@
         let currentTxHash = null
         let connectedSigner = null
         let connectedAddress = null
+        let rootEntryCounter = 1
 
         // Network selection
         document.querySelectorAll('.network-option').forEach(option => {
@@ -214,6 +305,36 @@
         function updateContractAddress() {
             const recordKeeperInput = document.getElementById('recordKeeper')
             recordKeeperInput.value = CONTRACT_ADDRESSES[currentNetwork].pdpService
+        }
+
+        // Root entry management
+        function addRootEntry() {
+            rootEntryCounter++
+            const rootEntries = document.getElementById('rootEntries')
+            const newEntry = document.createElement('div')
+            newEntry.className = 'root-entry'
+            newEntry.innerHTML = `
+                <h4>Root Entry ${rootEntryCounter}</h4>
+                <div style="margin-bottom: 10px;">
+                    <label>Root CID:</label>
+                    <input type="text" class="root-cid" placeholder="baga6ea4seaqj..." />
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <label>Raw Size (bytes):</label>
+                    <input type="number" class="root-size" placeholder="1048576" />
+                </div>
+                <button type="button" class="remove-root-btn" onclick="removeRootEntry(this)">Remove</button>
+            `
+            rootEntries.appendChild(newEntry)
+        }
+
+        function removeRootEntry(button) {
+            const rootEntries = document.getElementById('rootEntries')
+            if (rootEntries.children.length > 1) {
+                button.parentElement.remove()
+            } else {
+                showStatus('Cannot remove the last root entry. At least one root entry is required.', 'error')
+            }
         }
 
         // MetaMask connection functionality
@@ -251,6 +372,7 @@
                 document.getElementById('connectWalletBtn').disabled = true
                 document.getElementById('walletStatus').textContent = `Connected: ${connectedAddress.slice(0, 6)}...${connectedAddress.slice(-4)} on ${currentNetwork === 'mainnet' ? 'Mainnet' : 'Calibration'}`
                 document.getElementById('createProofSetBtn').disabled = false
+                document.getElementById('addRootsBtn').disabled = false
 
                 showStatus(`Successfully connected to MetaMask!
 Address: ${connectedAddress}
@@ -267,6 +389,7 @@ Network: ${currentNetwork === 'mainnet' ? 'Filecoin Mainnet' : 'Calibration Test
                 document.getElementById('connectWalletBtn').disabled = false
                 document.getElementById('walletStatus').textContent = 'Click to connect your MetaMask wallet for signing'
                 document.getElementById('createProofSetBtn').disabled = true
+                document.getElementById('addRootsBtn').disabled = true
             }
         }
 
@@ -286,6 +409,7 @@ Network: ${currentNetwork === 'mainnet' ? 'Filecoin Mainnet' : 'Calibration Test
                     document.getElementById('connectWalletBtn').disabled = false
                     document.getElementById('walletStatus').textContent = 'Click to connect your MetaMask wallet for signing'
                     document.getElementById('createProofSetBtn').disabled = true
+                    document.getElementById('addRootsBtn').disabled = true
                     showStatus('MetaMask disconnected', 'info')
                 } else {
                     // Account changed, reconnect
@@ -306,7 +430,6 @@ Network: ${currentNetwork === 'mainnet' ? 'Filecoin Mainnet' : 'Calibration Test
         function validateInputs() {
             const pdpEndpoint = document.getElementById('pdpEndpoint').value
             const recordKeeper = document.getElementById('recordKeeper').value
-            const payee = document.getElementById('payee').value
 
             if (!connectedSigner) {
                 throw new Error('Please connect your MetaMask wallet first')
@@ -320,6 +443,13 @@ Network: ${currentNetwork === 'mainnet' ? 'Filecoin Mainnet' : 'Calibration Test
                 throw new Error('Please enter a valid record keeper contract address')
             }
 
+            return { pdpEndpoint, recordKeeper }
+        }
+
+        function validateCreateProofSetInputs() {
+            const { pdpEndpoint, recordKeeper } = validateInputs()
+            const payee = document.getElementById('payee').value
+
             if (!payee || !ethers.isAddress(payee)) {
                 throw new Error('Please enter a valid storage provider address')
             }
@@ -327,11 +457,64 @@ Network: ${currentNetwork === 'mainnet' ? 'Filecoin Mainnet' : 'Calibration Test
             return { pdpEndpoint, recordKeeper, payee }
         }
 
+        function validateAddRootsInputs() {
+            const { pdpEndpoint, recordKeeper } = validateInputs()
+            
+            const proofSetId = parseInt(document.getElementById('addRootsProofSetId').value)
+            const clientDataSetId = parseInt(document.getElementById('addRootsClientDataSetId').value)
+            const nextRootId = parseInt(document.getElementById('nextRootId').value)
+
+            if (isNaN(proofSetId) || proofSetId < 0) {
+                throw new Error('Please enter a valid proof set ID')
+            }
+
+            if (isNaN(clientDataSetId) || clientDataSetId < 0) {
+                throw new Error('Please enter a valid client dataset ID')
+            }
+
+            if (isNaN(nextRootId) || nextRootId < 0) {
+                throw new Error('Please enter a valid next root ID')
+            }
+
+            // Validate root entries
+            const rootEntries = document.querySelectorAll('.root-entry')
+            const rootDataArray = []
+
+            for (let i = 0; i < rootEntries.length; i++) {
+                const entry = rootEntries[i]
+                const cidInput = entry.querySelector('.root-cid')
+                const sizeInput = entry.querySelector('.root-size')
+                
+                const cid = cidInput.value.trim()
+                const rawSize = parseInt(sizeInput.value)
+
+                if (!cid) {
+                    throw new Error(`Root entry ${i + 1}: Please enter a root CID`)
+                }
+
+                if (isNaN(rawSize) || rawSize <= 0) {
+                    throw new Error(`Root entry ${i + 1}: Please enter a valid raw size (positive number)`)
+                }
+
+                rootDataArray.push({
+                    cid: cid,
+                    rawSize: rawSize
+                })
+            }
+
+            if (rootDataArray.length === 0) {
+                throw new Error('Please add at least one root entry')
+            }
+
+            return { pdpEndpoint, recordKeeper, proofSetId, clientDataSetId, nextRootId, rootDataArray }
+        }
+
+        // Create Proof Set functionality
         document.getElementById('createProofSetBtn').addEventListener('click', async () => {
             try {
                 showStatus('Validating inputs...', 'info')
                 
-                const { pdpEndpoint, recordKeeper, payee } = validateInputs()
+                const { pdpEndpoint, recordKeeper, payee } = validateCreateProofSetInputs()
                 const clientDataSetId = parseInt(document.getElementById('clientDataSetId').value)
                 const withCDN = document.getElementById('withCDN').value === 'true'
                 
@@ -369,6 +552,46 @@ You can now check the status to see when it's confirmed on-chain.`, 'success')
             }
         })
 
+        // Add Roots functionality
+        document.getElementById('addRootsBtn').addEventListener('click', async () => {
+            try {
+                showStatus('Validating inputs...', 'info')
+                
+                const { pdpEndpoint, recordKeeper, proofSetId, clientDataSetId, nextRootId, rootDataArray } = validateAddRootsInputs()
+                
+                console.log('Adding roots with:', {
+                    proofSetId,
+                    clientDataSetId,
+                    nextRootId,
+                    rootDataArray
+                })
+
+                showStatus('Creating PDP auth helper and tool...', 'info')
+                
+                // Create auth helper and PDP tool using connected MetaMask signer
+                const chainId = currentNetwork === 'mainnet' ? 314 : 314159
+                const authHelper = new PDPAuthHelper(recordKeeper, connectedSigner, chainId)
+                const pdpTool = new PDPTool(pdpEndpoint, authHelper)
+
+                showStatus('Signing and sending add roots request...', 'info')
+
+                // Add roots using the SDK's PDPTool
+                console.log('PDPTool instance:', pdpTool)
+                const result = await pdpTool.addRoots(proofSetId, clientDataSetId, nextRootId, rootDataArray)
+                
+                showStatus(`Roots added successfully!
+${result.message}
+
+Roots added to proof set ID: ${proofSetId}
+Total roots added: ${rootDataArray.length}`, 'success')
+
+            } catch (error) {
+                console.error('Error adding roots:', error)
+                showStatus(`Error: ${error.message}`, 'error')
+            }
+        })
+
+        // Check Status functionality
         document.getElementById('checkStatusBtn').addEventListener('click', async () => {
             if (!currentTxHash) {
                 showStatus('No transaction hash available. Create a proof set first.', 'error')
@@ -398,6 +621,11 @@ ${status.proofSetId ? `Proof Set ID: ${status.proofSetId}` : ''}`
                 const statusType = status.ok === false ? 'error' : status.proofsetCreated ? 'success' : 'info'
                 showStatus(statusMessage, statusType)
 
+                // Auto-populate proof set ID for add roots if creation succeeded
+                if (status.proofsetCreated && status.proofSetId) {
+                    document.getElementById('addRootsProofSetId').value = status.proofSetId
+                }
+
             } catch (error) {
                 console.error('Error checking status:', error)
                 showStatus(`Error checking status: ${error.message}`, 'error')
@@ -405,7 +633,7 @@ ${status.proofSetId ? `Proof Set ID: ${status.proofSetId}` : ''}`
         })
 
         // Initial message
-        showStatus('Enter your details above and click "Create Proof Set" to begin.', 'info')
+        showStatus('Enter your details above and click "Create Proof Set" or "Add Roots" to begin.', 'info')
     </script>
 </body>
 </html>
