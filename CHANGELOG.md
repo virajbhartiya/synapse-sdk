@@ -1,3 +1,16 @@
+## [0.0.1](https://github.com/FilOzone/synapse-sdk/compare/v0.0.0...v0.0.1) (2025-06-05)
+
+### Bug Fixes
+
+* **auth:** no need for digest check ([cac3b71](https://github.com/FilOzone/synapse-sdk/commit/cac3b71f95ab3bd27910c4ed324c7187e2940552))
+* use full bytes of commp in auth signing blob ([2901305](https://github.com/FilOzone/synapse-sdk/commit/2901305a2499b74760b600bd637a6bd008bd25b2))
+
+### Trivial Changes
+
+* **ci:** no more dry-run publishes ([7b0da83](https://github.com/FilOzone/synapse-sdk/commit/7b0da839393f75a2554a40579fbfcfa3163a5b27))
+* **docs:** add CHANGELOG with 0.0.0 notes ([61193f9](https://github.com/FilOzone/synapse-sdk/commit/61193f9595f703c420408a127d777fcd4346d8e5))
+* **test:** update addRoots auth blob fixtures ([2897f2b](https://github.com/FilOzone/synapse-sdk/commit/2897f2b179b107b5b0f95a86c63b40c89f9c6fbe))
+
 ## 0.0.0 (2025-06-05)
 
 ### Features
@@ -63,5 +76,3 @@
     * **test:** extend timeout for windows browser tests ([0dadc4f](https://github.com/FilOzone/synapse-sdk/commit/0dadc4f2c9dfc22f571a0e85b2a0b9f265721ab8))
     * **tmp:** add example-auth-simple.js ([f329d09](https://github.com/FilOzone/synapse-sdk/commit/f329d09a9d7db9b43fe401933ccaf294fdc9cb91))
     * update GHA release permissions ([f07628f](https://github.com/FilOzone/synapse-sdk/commit/f07628fb5055906d3a5dfcb476c04009fc8dda25))
-
-
