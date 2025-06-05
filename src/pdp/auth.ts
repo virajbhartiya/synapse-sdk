@@ -301,53 +301,82 @@ export class PDPAuthHelper {
    * ```
    */
 
-  private debugAddRootsHashes(
+  private async debugAddRootsHashes(
     domain: ethers.TypedDataDomain,
     types: Record<string, Array<{ name: string, type: string }>>,
     value: any,
-    formattedRootData: any[]
-  ): void {
+    formattedRootData: any[],
+    signature?: string
+  ): Promise<void> {
     console.log('\n=== AddRoots EIP-712 Debug ===')
+    
+    // Get signer address (expected payer)
+    const signerAddress = await this.signer.getAddress()
+    console.log('Expected payer:', signerAddress)
     
     // 1. Domain Separator
     const domainSeparator = ethers.TypedDataEncoder.hashDomain(domain)
-    console.log('Domain Separator:', domainSeparator)
+    console.log('Domain hash:', domainSeparator)
     
-    // 2. Individual Root Data Hashes (matching Solidity logic)
+    // 2. Type hashes (matching Solidity contract)
+    const CID_TYPEHASH = ethers.keccak256(ethers.toUtf8Bytes('Cid(bytes data)'))
+    const ROOTDATA_TYPEHASH = ethers.keccak256(ethers.toUtf8Bytes('RootData(Cid root,uint256 rawSize)Cid(bytes data)'))
+    const ADD_ROOTS_TYPEHASH = ethers.keccak256(ethers.toUtf8Bytes('AddRoots(uint256 clientDataSetId,uint256 firstAdded,RootData[] rootData)Cid(bytes data)RootData(Cid root,uint256 rawSize)'))
+    
+    console.log('CID_TYPEHASH:', CID_TYPEHASH)
+    console.log('ROOTDATA_TYPEHASH:', ROOTDATA_TYPEHASH)
+    console.log('ADD_ROOTS_TYPEHASH:', ADD_ROOTS_TYPEHASH)
+    
+    // 3. Input values
+    console.log('clientDataSetId:', value.clientDataSetId)
+    console.log('firstAdded:', value.firstAdded)
+    
+    
+    // 5. Individual Root Data Hashes (matching Solidity logic)
     const rootDataHashes = formattedRootData.map((item, index) => {
       const cidHash = ethers.keccak256(
         ethers.AbiCoder.defaultAbiCoder().encode(
-          ['bytes32', 'bytes'],
-          [ethers.keccak256(ethers.toUtf8Bytes('Cid(bytes data)')), ethers.keccak256(item.root.data)]
+          ['bytes32', 'bytes32'],
+          [CID_TYPEHASH, ethers.keccak256(item.root.data)]
         )
       )
+
       
       const rootDataHash = ethers.keccak256(
         ethers.AbiCoder.defaultAbiCoder().encode(
           ['bytes32', 'bytes32', 'uint256'],
-          [
-            ethers.keccak256(ethers.toUtf8Bytes('RootData(Cid root,uint256 rawSize)Cid(bytes data)')),
-            cidHash,
-            item.rawSize
-          ]
+          [ROOTDATA_TYPEHASH, cidHash, item.rawSize]
         )
       )
       
-      console.log(`Root ${index} - CID: ${ethers.hexlify(item.root.data)}, Size: ${item.rawSize}, Hash: ${rootDataHash}`)
+      console.log(`Root ${index} - CID: ${ethers.hexlify(item.root.data)}, Size: ${item.rawSize}, CID Hash: ${cidHash}, Root Hash: ${rootDataHash}`)
       return rootDataHash
     })
     
-    // 3. Combined Root Data Hash
+    // 6. Combined Root Data Hash
     const combinedRootDataHash = ethers.keccak256(ethers.concat(rootDataHashes))
-    console.log('Combined Root Data Hash:', combinedRootDataHash)
+    console.log('Root data combined hash:', combinedRootDataHash)
     
-    // 4. Struct Hash
+    // 7. Struct Hash
     const structHash = ethers.TypedDataEncoder.hashStruct('AddRoots', types, value)
-    console.log('Struct Hash:', structHash)
+    console.log('Struct hash:', structHash)
     
-    // 5. Final Digest
+    // 8. Final Digest
     const digest = ethers.TypedDataEncoder.hash(domain, types, value)
-    console.log('Final Digest:', digest)
+    console.log('Digest:', digest)
+    
+    // 9. Signature (if provided)
+    if (signature) {
+      console.log('Signature:', signature)
+      
+      // Try to recover the signer from the signature
+      try {
+        const recoveredSigner = ethers.verifyTypedData(domain, types, value, signature)
+        console.log('Recovered signer:', recoveredSigner)
+      } catch (error) {
+        console.log('Failed to recover signer:', error)
+      }
+    }
     
     console.log('=== End Debug ===\n')
   }
@@ -365,15 +394,10 @@ export class PDPAuthHelper {
         throw new Error(`Invalid CommP: ${String(root.cid)}`)
       }
 
-      const digest = commP.multihash.digest
-      if (digest.length !== 32) {
-        throw new Error(`Expected 32-byte digest, got ${digest.length} bytes`)
-      }
-
       // Format as nested structure matching Solidity's Cids.Cid struct
       formattedRootData.push({
         root: {
-          data: digest // This will be a Uint8Array
+          data: commP.bytes // This will be a Uint8Array
         },
         rawSize: BigInt(root.rawSize)
       })
@@ -403,9 +427,10 @@ export class PDPAuthHelper {
         RootData: EIP712_TYPES.RootData,
         Cid: EIP712_TYPES.Cid
       }
-      this.debugAddRootsHashes(this.domain, types, value, formattedRootData)
 
       signature = await this.signWithMetaMask(types, value)
+      this.debugAddRootsHashes(this.domain, types, value, formattedRootData, signature)
+
     } else {
       // Use standard ethers.js signing with bigint values
       const value = {
@@ -424,9 +449,10 @@ export class PDPAuthHelper {
       console.log('value', value)
       console.log('domain', this.domain)
 
-      this.debugAddRootsHashes(this.domain, types, value, formattedRootData)
 
       signature = await this.signer.signTypedData(this.domain, types, value)
+      this.debugAddRootsHashes(this.domain, types, value, formattedRootData, signature)
+
     }
 
     // Return signature with components
