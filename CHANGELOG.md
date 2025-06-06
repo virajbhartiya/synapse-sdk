@@ -1,3 +1,19 @@
+## [0.2.0](https://github.com/FilOzone/synapse-sdk/compare/v0.1.0...v0.2.0) (2025-06-06)
+
+### Features
+
+* **payments:** add enhanced payment APIs and update Pandora contract integration ([b6ff598](https://github.com/FilOzone/synapse-sdk/commit/b6ff598702c0ea629678378da5244d8c73b43e6c))
+
+### Bug Fixes
+
+* **payments:** no fallback to known pricing, only from chain ([e43def6](https://github.com/FilOzone/synapse-sdk/commit/e43def67d6bd49e48739bca9345330b13eb03b92))
+* use my latest deployed pandora contract ([1b6b198](https://github.com/FilOzone/synapse-sdk/commit/1b6b1986a5fa36bb22e794c57b11c64f68dff441))
+
+### Trivial Changes
+
+* **doc:** add payments-demo.html ([e85bb18](https://github.com/FilOzone/synapse-sdk/commit/e85bb185acc3f57e3ea782d8100c9b7e34ab6f01))
+* **test:** merge payments tests into single file ([6166615](https://github.com/FilOzone/synapse-sdk/commit/61666156276e0ab1bc58b5f44c943cabb7e87268))
+
 ## [0.1.0](https://github.com/FilOzone/synapse-sdk/compare/v0.0.1...v0.1.0) (2025-06-06)
 
 ### Features
