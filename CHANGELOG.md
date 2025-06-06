@@ -1,3 +1,16 @@
+## [0.3.0](https://github.com/FilOzone/synapse-sdk/compare/v0.2.0...v0.3.0) (2025-06-06)
+
+### Features
+
+* **pandora:** implement getClientProofSets for client ([bef0053](https://github.com/FilOzone/synapse-sdk/commit/bef005365b6819fd0e143e12959659403ed94d57))
+* **pdp:** add comprehensive proof set discovery and status utilities ([6f1da3e](https://github.com/FilOzone/synapse-sdk/commit/6f1da3e879ad40f4b0e469a3a0f69f5a5d22a1fe))
+* **pdp:** add findPiece method to check piece existence on PDP server ([cd7f3cd](https://github.com/FilOzone/synapse-sdk/commit/cd7f3cd0c7570fa4d013837bd068257f11d9d90a))
+
+### Trivial Changes
+
+* **docs:** add proof-sets-viewer.html example ([bdb995e](https://github.com/FilOzone/synapse-sdk/commit/bdb995e41647b5a116c1a77d319fd6256b9293c1))
+* remove unnecessary cruft and improve error handling ([f04c0e0](https://github.com/FilOzone/synapse-sdk/commit/f04c0e0a882999a53a265686ce18600a1a32bf6a))
+
 ## [0.2.0](https://github.com/FilOzone/synapse-sdk/compare/v0.1.0...v0.2.0) (2025-06-06)
 
 ### Features
