@@ -1,3 +1,13 @@
+## [0.1.0](https://github.com/FilOzone/synapse-sdk/compare/v0.0.1...v0.1.0) (2025-06-06)
+
+### Features
+
+* **pdptool:** AddRoots API call ([#70](https://github.com/FilOzone/synapse-sdk/issues/70)) ([d159552](https://github.com/FilOzone/synapse-sdk/commit/d15955283beadf2fe8dcd02d0a9426d7e91289b9))
+
+### Trivial Changes
+
+* **docs:** fix CHANGELOG format [skip ci] ([d89be6c](https://github.com/FilOzone/synapse-sdk/commit/d89be6c20c5f16b6202dded2af308173fe2a8346))
+
 ## [0.0.1](https://github.com/FilOzone/synapse-sdk/compare/v0.0.0...v0.0.1) (2025-06-05)
 
 ### Bug Fixes
