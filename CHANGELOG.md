@@ -1,3 +1,9 @@
+## [0.4.0](https://github.com/FilOzone/synapse-sdk/compare/v0.3.0...v0.4.0) (2025-06-09)
+
+### Features
+
+* refactor SDK architecture for separation of concerns ([9e0867b](https://github.com/FilOzone/synapse-sdk/commit/9e0867b4bf30cb914f8243d91c5575c2d66835b1))
+
 ## [0.3.0](https://github.com/FilOzone/synapse-sdk/compare/v0.2.0...v0.3.0) (2025-06-06)
 
 ### Features
