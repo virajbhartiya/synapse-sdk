@@ -1,3 +1,27 @@
+## [0.5.0](https://github.com/FilOzone/synapse-sdk/compare/v0.4.0...v0.5.0) (2025-06-09)
+
+### Features
+
+* add minimum upload size validation and improve storage reliability ([4270590](https://github.com/FilOzone/synapse-sdk/commit/42705907776db9c1380b799e6b538d5eec0cf9d2))
+* **storage:** add creation callbacks and remove out-of-scope methods ([2de7f91](https://github.com/FilOzone/synapse-sdk/commit/2de7f918d676a177fd55ae035000b6d7199e3a84))
+* **storage:** implement download method and simplify DownloadOptions ([05c1b79](https://github.com/FilOzone/synapse-sdk/commit/05c1b795d5f5108554a31c15f21c0762187661f4))
+* **storage:** implement preflight checks and refactor allowance API ([2746cba](https://github.com/FilOzone/synapse-sdk/commit/2746cba61f704d9f53e8f5d5a9f63562c18c21a3))
+* **storage:** implement provider selection and proof set management ([9faf04f](https://github.com/FilOzone/synapse-sdk/commit/9faf04f49e586c733ce65e40e8ea50e4f1699782))
+* **storage:** implement upload method with UploadCallbacks ([e289ae9](https://github.com/FilOzone/synapse-sdk/commit/e289ae9f7efd93dda62c3b50cc53cf81d1281217))
+
+### Bug Fixes
+
+* add hack to skip 60s delay in upload during tests ([f4ade39](https://github.com/FilOzone/synapse-sdk/commit/f4ade3979327b2e5f5d204f29f0074f3cecc0995))
+* **docs:** update README examples for latest signatures ([b574a90](https://github.com/FilOzone/synapse-sdk/commit/b574a90b1336b41723cf2d9359e84a6b45a1ec1f))
+* **pdp:** restore correct upload protocol with check object ([18618b2](https://github.com/FilOzone/synapse-sdk/commit/18618b25fd41c659374f6612e26ddc1db7e450c6))
+* semantic-release bug ([bf340d8](https://github.com/FilOzone/synapse-sdk/commit/bf340d8f203d56f2726c012e56112b2b17be9f44))
+
+### Trivial Changes
+
+* remove example-usage.js in favour of new examples in utils/ ([72dbe23](https://github.com/FilOzone/synapse-sdk/commit/72dbe23ed7fceb8b7ee38356b8513b772309a100))
+* remove unused getters ([1bed0db](https://github.com/FilOzone/synapse-sdk/commit/1bed0db5103b8b5a8c33d05dce1c271400d3c9eb))
+* use ethers.js utilities instead of hardcoded decimals ([8895422](https://github.com/FilOzone/synapse-sdk/commit/88954226c081f3df170a0fcfcbf25367e5e19a9e))
+
 ## [0.4.0](https://github.com/FilOzone/synapse-sdk/compare/v0.3.0...v0.4.0) (2025-06-09)
 
 ### Features
