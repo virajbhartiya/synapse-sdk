@@ -1,3 +1,17 @@
+## [0.6.0](https://github.com/FilOzone/synapse-sdk/compare/v0.5.0...v0.6.0) (2025-06-10)
+
+### Features
+
+* **utils:** add Pandora storage provider admin portal [skip ci] ([#79](https://github.com/FilOzone/synapse-sdk/issues/79)) ([e6a79bc](https://github.com/FilOzone/synapse-sdk/commit/e6a79bc589d2a0a2f692c617104fbb5962bba687))
+
+### Bug Fixes
+
+* remove 60s delay after createproofset and associated testing hack ([353551a](https://github.com/FilOzone/synapse-sdk/commit/353551ad1207df97195000459bae35e7a8683200))
+
+### Trivial Changes
+
+* **docs:** move ADMIN_SAFE_INTEGRATION_PLAN.md to utils ([4167234](https://github.com/FilOzone/synapse-sdk/commit/416723423968780dfe9ed582ba078812f44e6a2a))
+
 ## [0.5.0](https://github.com/FilOzone/synapse-sdk/compare/v0.4.0...v0.5.0) (2025-06-09)
 
 ### Features
