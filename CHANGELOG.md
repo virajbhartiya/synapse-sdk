@@ -1,3 +1,9 @@
+## [0.6.1](https://github.com/FilOzone/synapse-sdk/compare/v0.6.0...v0.6.1) (2025-06-10)
+
+### Trivial Changes
+
+* **deps-dev:** bump @types/node from 22.15.31 to 24.0.0 ([fecfaa5](https://github.com/FilOzone/synapse-sdk/commit/fecfaa5c9bf919a566274b8be807e5bf52ee3212))
+
 ## [0.6.0](https://github.com/FilOzone/synapse-sdk/compare/v0.5.0...v0.6.0) (2025-06-10)
 
 ### Features
