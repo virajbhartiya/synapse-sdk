@@ -1,3 +1,9 @@
+## [0.7.0](https://github.com/FilOzone/synapse-sdk/compare/v0.6.1...v0.7.0) (2025-06-10)
+
+### Features
+
+* **storage:** implement smart provider selection to prefer existing relationships ([8433899](https://github.com/FilOzone/synapse-sdk/commit/843389974ee24165db70fcd690c5f4fe34c28afc))
+
 ## [0.6.1](https://github.com/FilOzone/synapse-sdk/compare/v0.6.0...v0.6.1) (2025-06-10)
 
 ### Trivial Changes
