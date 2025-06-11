@@ -6,11 +6,13 @@ import { ethers } from 'ethers'
 import {
   type SynapseOptions,
   type StorageServiceOptions,
-  type FilecoinNetworkType
+  type FilecoinNetworkType,
+  type PieceDiscovery
 } from './types.js'
 import { StorageService } from './storage/index.js'
 import { PaymentsService } from './payments/index.js'
 import { PandoraService } from './pandora/index.js'
+import { ChainDiscovery } from './discovery/chain.js'
 import { CHAIN_IDS, CONTRACT_ADDRESSES, createError } from './utils/index.js'
 
 export class Synapse {
@@ -20,13 +22,14 @@ export class Synapse {
   private readonly _payments: PaymentsService
   private readonly _provider: ethers.Provider
   private readonly _pandoraAddress: string
+  private readonly _pieceDiscovery: PieceDiscovery
 
   /**
    * Create a new Synapse instance with async initialization.
    * @param options - Configuration options for Synapse
    * @returns A fully initialized Synapse instance
    */
-  static async create (options: SynapseOptions): Promise<Synapse> {
+  static async create (options: SynapseOptions & { pieceDiscovery?: PieceDiscovery }): Promise<Synapse> {
     // Validate options
     const providedOptions = [options.privateKey, options.provider, options.signer].filter(Boolean).length
     if (providedOptions !== 1) {
@@ -120,13 +123,23 @@ export class Synapse {
       )
     }
 
+    // Determine Pandora address early for discovery initialization
+    const pandoraAddress = options.pandoraAddress ?? CONTRACT_ADDRESSES.PANDORA_SERVICE[network]
+    if (pandoraAddress === '' || pandoraAddress === undefined) {
+      throw new Error(`No Pandora service address configured for network: ${network}`)
+    }
+
+    // Create default discovery if not provided
+    const pieceDiscovery = options.pieceDiscovery ?? new ChainDiscovery(provider, pandoraAddress)
+
     return new Synapse(
       provider,
       signer,
       network,
       options.disableNonceManager === true,
       options.withCDN === true,
-      options.pandoraAddress
+      pandoraAddress,
+      pieceDiscovery
     )
   }
 
@@ -136,19 +149,16 @@ export class Synapse {
     network: FilecoinNetworkType,
     disableNonceManager: boolean,
     withCDN: boolean,
-    pandoraAddressOverride?: string
+    pandoraAddress: string,
+    pieceDiscovery: PieceDiscovery
   ) {
     this._provider = provider
     this._signer = signer
     this._network = network
     this._withCDN = withCDN
     this._payments = new PaymentsService(provider, signer, network, disableNonceManager)
-
-    // Set Pandora address (use override or default for network)
-    this._pandoraAddress = pandoraAddressOverride ?? CONTRACT_ADDRESSES.PANDORA_SERVICE[network]
-    if (this._pandoraAddress === '' || this._pandoraAddress === undefined) {
-      throw new Error(`No Pandora service address configured for network: ${network}`)
-    }
+    this._pandoraAddress = pandoraAddress
+    this._pieceDiscovery = pieceDiscovery
   }
 
   /**
@@ -230,6 +240,58 @@ export class Synapse {
    */
   getNetwork (): FilecoinNetworkType {
     return this._network
+  }
+
+  /**
+   * Download a piece using discovery to find all locations
+   * Tries URLs as they're discovered, enabling fast cache hits
+   * @param commp - The piece commitment (CommP) to download
+   * @param options - Optional download options including preferred provider
+   * @returns A ReadableStream of the piece data
+   */
+  async download (
+    commp: string,
+    options?: { providerAddress?: string }
+  ): Promise<ReadableStream<Uint8Array>> {
+    const client = await this._signer.getAddress()
+    const errors: Error[] = []
+    let attemptedUrls = 0
+
+    // Try URLs as they're discovered
+    for await (const url of this._pieceDiscovery.findPiece(commp, client, options)) {
+      attemptedUrls++
+      try {
+        const response = await fetch(url)
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        }
+
+        // Verify we got a body
+        if (response.body == null) {
+          throw new Error('Response body is null')
+        }
+
+        return response.body
+      } catch (error) {
+        errors.push(new Error(`${url}: ${error instanceof Error ? error.message : String(error)}`))
+        continue // Try next URL as it comes in
+      }
+    }
+
+    if (attemptedUrls === 0) {
+      throw createError(
+        'Synapse',
+        'download',
+        `Piece ${commp} not found`
+      )
+    }
+
+    throw createError(
+      'Synapse',
+      'download',
+      'All download attempts failed',
+      new AggregateError(errors)
+    )
   }
 }
 

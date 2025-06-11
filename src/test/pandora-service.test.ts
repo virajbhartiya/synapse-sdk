@@ -598,11 +598,13 @@ describe('PandoraService', () => {
             ['tuple(address,string,string,uint256,uint256)'],
             [providerInfo]
           )
+        } else if (data?.startsWith('0x93ecb91e') === true) { // getProviderIdByAddress selector
+          return ethers.zeroPadValue('0x01', 32) // Return ID 1
         }
         return '0x' + '0'.repeat(64)
       }
 
-      const info = await pandoraService.getApprovedProvider(1)
+      const info = await pandoraService.getApprovedProviderById(1)
       assert.equal(info.owner.toLowerCase(), '0x1234567890123456789012345678901234567890')
       assert.equal(info.pdpUrl, 'https://pdp.provider.com')
       assert.equal(info.pieceRetrievalUrl, 'https://retrieval.provider.com')

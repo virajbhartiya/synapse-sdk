@@ -265,3 +265,22 @@ export interface UploadResult {
   /** Root ID in the proof set */
   rootId?: number
 }
+
+/**
+ * Interface for pluggable piece discovery
+ * Implementations yield URLs as they're found, enabling progressive discovery
+ */
+export interface PieceDiscovery {
+  /**
+   * Find URLs where a piece can be downloaded
+   * @param commp - The piece commitment (CommP) to find
+   * @param client - The client address who owns the piece
+   * @param options - Optional parameters like preferred provider
+   * @returns AsyncIterable of URLs where the piece can be downloaded
+   */
+  findPiece: (
+    commp: string,
+    client: string,
+    options?: { providerAddress?: string }
+  ) => AsyncIterable<string>
+}

@@ -9,3 +9,6 @@ export * from './payments/index.js'
 export * from './pandora/index.js'
 export * from './pdp/index.js'
 export * from './storage/index.js'
+
+// Discovery exports
+export { ChainDiscovery } from './discovery/chain.js'

@@ -19,6 +19,15 @@ const mockSynapse = {
       rateUsed: BigInt(0),
       lockupUsed: BigInt(0)
     })
+  },
+  download: async (commp: string, options?: { providerId?: number }): Promise<ReadableStream<Uint8Array>> => {
+    // Mock implementation that returns a readable stream
+    return new ReadableStream({
+      start (controller) {
+        controller.enqueue(new Uint8Array(65).fill(42))
+        controller.close()
+      }
+    })
   }
 } as unknown as Synapse
 
@@ -93,7 +102,8 @@ describe('StorageService', () => {
           const idx = mockProviders.findIndex(p => p.owner.toLowerCase() === address.toLowerCase())
           return idx >= 0 ? idx + 1 : 0
         },
-        getApprovedProvider: async (id: number) => mockProviders[id - 1] ?? null
+        getApprovedProvider: async (address: string) => mockProviders.find(p => p.owner.toLowerCase() === address.toLowerCase()) ?? null,
+        getApprovedProviderById: async (id: number) => mockProviders[id - 1] ?? null
       } as any
 
       // Create storage service without specifying providerId
@@ -134,7 +144,7 @@ describe('StorageService', () => {
       ]
 
       const mockPandoraService = {
-        getApprovedProvider: async (id: number) => {
+        getApprovedProviderById: async (id: number) => {
           assert.equal(id, 3)
           return mockProvider
         },
@@ -164,7 +174,7 @@ describe('StorageService', () => {
 
     it('should throw when specified provider not found', async () => {
       const mockPandoraService = {
-        getApprovedProvider: async () => ({
+        getApprovedProviderById: async () => ({
           owner: '0x0000000000000000000000000000000000000000', // Zero address
           pdpUrl: '',
           pieceRetrievalUrl: '',
@@ -210,7 +220,7 @@ describe('StorageService', () => {
       ]
 
       const mockPandoraService = {
-        getApprovedProvider: async () => mockProvider,
+        getApprovedProviderById: async () => mockProvider,
         getClientProofSetsWithDetails: async () => mockProofSets,
         getNextClientDataSetId: async () => 2
       } as any
@@ -269,7 +279,7 @@ describe('StorageService', () => {
       ]
 
       const mockPandoraService = {
-        getApprovedProvider: async () => mockProvider,
+        getApprovedProviderById: async () => mockProvider,
         getClientProofSetsWithDetails: async () => mockProofSets,
         getNextClientDataSetId: async () => 3
       } as any
@@ -309,7 +319,7 @@ describe('StorageService', () => {
       }]
 
       const mockPandoraService = {
-        getApprovedProvider: async () => mockProvider,
+        getApprovedProviderById: async () => mockProvider,
         getClientProofSetsWithDetails: async () => proofSets,
         getNextClientDataSetId: async () => 2
       } as any
@@ -366,7 +376,7 @@ describe('StorageService', () => {
           assert.equal(addr, mockProvider.owner)
           return 3
         },
-        getApprovedProvider: async (id: number) => {
+        getApprovedProviderById: async (id: number) => {
           assert.equal(id, 3)
           return mockProvider
         }
@@ -410,7 +420,7 @@ describe('StorageService', () => {
           assert.equal(addr.toLowerCase(), mockProvider.owner.toLowerCase())
           return 4
         },
-        getApprovedProvider: async (id: number) => {
+        getApprovedProviderById: async (id: number) => {
           assert.equal(id, 4)
           return mockProvider
         },
@@ -545,7 +555,7 @@ describe('StorageService', () => {
       const mockPandoraService = {
         getClientProofSetsWithDetails: async () => mockProofSets,
         getProviderIdByAddress: async () => 7,
-        getApprovedProvider: async () => mockProviders[0],
+        getApprovedProviderById: async () => mockProviders[0],
         getAllApprovedProviders: async () => mockProviders
       } as any
 
@@ -639,7 +649,7 @@ describe('StorageService', () => {
       }
 
       const mockPandoraService = {
-        getApprovedProvider: async () => mockProvider,
+        getApprovedProviderById: async () => mockProvider,
         getClientProofSetsWithDetails: async () => [], // No proof sets
         getProviderIdByAddress: async () => 11,
         getNextClientDataSetId: async () => 1
@@ -667,12 +677,12 @@ describe('StorageService', () => {
       }
 
       const mockPandoraService = {
-        getApprovedProvider: async () => {
-          callOrder.push('getApprovedProvider-start')
+        getApprovedProviderById: async () => {
+          callOrder.push('getApprovedProviderById-start')
           getApprovedProviderCalled = true
           // Simulate async work
           await new Promise(resolve => setTimeout(resolve, 10))
-          callOrder.push('getApprovedProvider-end')
+          callOrder.push('getApprovedProviderById-end')
           return mockProvider
         },
         getClientProofSetsWithDetails: async () => {
@@ -736,7 +746,7 @@ describe('StorageService', () => {
           return mockProofSets
         },
         getProviderIdByAddress: async () => 13,
-        getApprovedProvider: async () => mockProvider,
+        getApprovedProviderById: async () => mockProvider,
         getAllApprovedProviders: async () => {
           getAllApprovedProvidersCalled = true
           throw new Error('Should not fetch all providers when proof sets exist')
@@ -1000,25 +1010,23 @@ describe('StorageService', () => {
     })
 
     it('should handle download errors', async () => {
-      const mockPandoraService = {} as any
-      const service = new StorageService(mockSynapse, mockPandoraService, mockProvider, 123, { withCDN: false })
-      const testCommP = 'baga6ea4seaqao7s73y24kcutaosvacpdjgfe5pw76ooefnyqw4ynr3d2y6x2mpq'
+      // Create a custom mock Synapse that throws on download
+      const errorMockSynapse = {
+        ...mockSynapse,
+        download: async (): Promise<ReadableStream<Uint8Array>> => {
+          throw new Error('Download failed: Network error')
+        }
+      } as unknown as Synapse
 
-      // Mock the PDPServer downloadPiece method to throw error
-      const serviceAny = service as any
-      const originalDownload = serviceAny._pdpServer.downloadPiece
-      serviceAny._pdpServer.downloadPiece = async (): Promise<Uint8Array> => {
-        throw new Error('Network error')
-      }
+      const mockPandoraService = {} as any
+      const service = new StorageService(errorMockSynapse, mockPandoraService, mockProvider, 123, { withCDN: false })
+      const testCommP = 'baga6ea4seaqao7s73y24kcutaosvacpdjgfe5pw76ooefnyqw4ynr3d2y6x2mpq'
 
       try {
         await service.download(testCommP)
         assert.fail('Should have thrown')
       } catch (error: any) {
-        assert.include(error.message, 'Failed to download piece from storage provider')
-      } finally {
-        // Restore original method
-        serviceAny._pdpServer.downloadPiece = originalDownload
+        assert.include(error.message, 'Download failed: Network error')
       }
     })
 

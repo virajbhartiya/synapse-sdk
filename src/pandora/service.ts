@@ -759,13 +759,41 @@ export class PandoraService {
   }
 
   /**
-   * Get information about an approved provider
+   * Get information about an approved provider by address
+   * @param providerAddress - Address of the provider
+   * @returns Provider information
+   */
+  async getApprovedProvider (providerAddress: string): Promise<ApprovedProviderInfo> {
+    const contract = this._getPandoraContract()
+    const id = await this.getProviderIdByAddress(providerAddress)
+    if (id === 0) {
+      throw new Error(`Provider with address ${providerAddress} is not approved`)
+    }
+    const info = await contract.getApprovedProvider(providerAddress)
+    return {
+      owner: info.owner,
+      pdpUrl: info.pdpUrl,
+      pieceRetrievalUrl: info.pieceRetrievalUrl,
+      registeredAt: Number(info.registeredAt),
+      approvedAt: Number(info.approvedAt)
+    }
+  }
+
+  /**
+   * Get information about an approved provider by ID
    * @param providerId - ID of the provider
    * @returns Provider information
    */
-  async getApprovedProvider (providerId: number): Promise<ApprovedProviderInfo> {
+  async getApprovedProviderById (providerId: number): Promise<ApprovedProviderInfo> {
     const contract = this._getPandoraContract()
+    // The contract's getApprovedProvider can accept an ID and returns provider info
     const info = await contract.getApprovedProvider(providerId)
+
+    // Check if provider exists (owner would be zero address if not)
+    if (info.owner === '0x0000000000000000000000000000000000000000') {
+      throw new Error(`Provider with ID ${providerId} is not approved`)
+    }
+
     return {
       owner: info.owner,
       pdpUrl: info.pdpUrl,
@@ -831,7 +859,7 @@ export class PandoraService {
     // Provider IDs start at 1
     for (let i = 1; i < nextId; i++) {
       try {
-        const provider = await this.getApprovedProvider(i)
+        const provider = await this.getApprovedProviderById(i)
         // Skip if provider was removed (owner would be zero address)
         if (provider.owner !== '0x0000000000000000000000000000000000000000') {
           providers.push(provider)

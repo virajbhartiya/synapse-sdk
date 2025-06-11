@@ -418,7 +418,7 @@ export class StorageService {
       )
     }
 
-    const provider = await pandoraService.getApprovedProvider(providerId)
+    const provider = await pandoraService.getApprovedProviderById(providerId)
 
     return {
       provider,
@@ -478,7 +478,7 @@ export class StorageService {
     }> {
     // Fetch provider info and proof sets in parallel
     const [provider, proofSets] = await Promise.all([
-      pandoraService.getApprovedProvider(providerId),
+      pandoraService.getApprovedProviderById(providerId),
       pandoraService.getClientProofSetsWithDetails(signerAddress)
     ])
 
@@ -594,7 +594,7 @@ export class StorageService {
         )
       }
 
-      const provider = await pandoraService.getApprovedProvider(providerId)
+      const provider = await pandoraService.getApprovedProviderById(providerId)
 
       return {
         provider,
@@ -783,22 +783,48 @@ export class StorageService {
   }
 
   /**
-   * Download data from the storage provider
+   * Download data directly from this specific storage provider
+   * @deprecated Use `directDownload()` for clarity. This method will be removed in a future version.
    */
   async download (commp: string | CommP, options?: DownloadOptions): Promise<Uint8Array> {
-    try {
-      // The StorageService instance is already configured with a specific provider
-      // and proof set that either uses CDN or doesn't. PDPServer always verifies the CommP.
+    console.warn('StorageService.download() is deprecated. Use directDownload() or synapse.download() instead.')
+    return await this.directDownload(commp, options)
+  }
 
-      const data = await this._pdpServer.downloadPiece(commp)
-      return data
-    } catch (error) {
-      throw createError(
-        'StorageService',
-        'download',
-        'Failed to download piece from storage provider',
-        error
-      )
+  /**
+   * Download data directly from this specific storage provider
+   * Uses the main Synapse download with a provider hint for consistency
+   */
+  async directDownload (commp: string | CommP, options?: DownloadOptions): Promise<Uint8Array> {
+    // Normalize commp to string
+    const commPString = typeof commp === 'string' ? commp : commp.toString()
+
+    // Leverage the main download with provider hint
+    const stream = await this._synapse.download(commPString, { providerAddress: this._provider.owner })
+
+    // Convert stream to Uint8Array for backward compatibility
+    const chunks: Uint8Array[] = []
+    const reader = stream.getReader()
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        chunks.push(value)
+      }
+    } finally {
+      reader.releaseLock()
     }
+
+    // Concatenate all chunks
+    const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0)
+    const result = new Uint8Array(totalLength)
+    let offset = 0
+    for (const chunk of chunks) {
+      result.set(chunk, offset)
+      offset += chunk.length
+    }
+
+    return result
   }
 }
