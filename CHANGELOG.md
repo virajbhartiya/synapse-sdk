@@ -1,3 +1,17 @@
+## [0.8.0](https://github.com/FilOzone/synapse-sdk/compare/v0.7.0...v0.8.0) (2025-06-11)
+
+### Features
+
+* return TransactionResponse objects from payment methods ([23d1d9d](https://github.com/FilOzone/synapse-sdk/commit/23d1d9d6dded4addcf529a5d8c716cf4dcc455e9))
+
+### Bug Fixes
+
+* **storage:** retry logic around proofset creation tx lookup ([454c721](https://github.com/FilOzone/synapse-sdk/commit/454c721773ad3e50b3b6c264752823fb4955d847))
+
+### Trivial Changes
+
+* minor README tweaks ([1ad8c09](https://github.com/FilOzone/synapse-sdk/commit/1ad8c095b6965785504d85fafbf677ad800b3e27))
+
 ## [0.7.0](https://github.com/FilOzone/synapse-sdk/compare/v0.6.1...v0.7.0) (2025-06-10)
 
 ### Features
