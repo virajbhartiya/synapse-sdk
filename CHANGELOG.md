@@ -1,3 +1,9 @@
+## [0.8.1](https://github.com/FilOzone/synapse-sdk/compare/v0.8.0...v0.8.1) (2025-06-11)
+
+### Bug Fixes
+
+* **addroots:** report full padded piece size to contract to match Curio ([277e015](https://github.com/FilOzone/synapse-sdk/commit/277e01598455c315ae04a21dfdd757bd2eaa0e46))
+
 ## [0.8.0](https://github.com/FilOzone/synapse-sdk/compare/v0.7.0...v0.8.0) (2025-06-11)
 
 ### Features
