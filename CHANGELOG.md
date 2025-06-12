@@ -1,3 +1,13 @@
+## [0.9.0](https://github.com/FilOzone/synapse-sdk/compare/v0.8.1...v0.9.0) (2025-06-12)
+
+### Features
+
+* **pdp:** add transaction tracking for root additions with server verification ([00de2b2](https://github.com/FilOzone/synapse-sdk/commit/00de2b27eac9ce0731c7d9d0f25cbf825ea2d8cc))
+
+### Trivial Changes
+
+* add conventional commits guidelines ([bc68d04](https://github.com/FilOzone/synapse-sdk/commit/bc68d042048feee572a96fa97f768bbc6ccfe68d))
+
 ## [0.8.1](https://github.com/FilOzone/synapse-sdk/compare/v0.8.0...v0.8.1) (2025-06-11)
 
 ### Bug Fixes
