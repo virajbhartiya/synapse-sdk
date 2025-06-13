@@ -1,3 +1,9 @@
+## [0.9.1](https://github.com/FilOzone/synapse-sdk/compare/v0.9.0...v0.9.1) (2025-06-13)
+
+### Trivial Changes
+
+* **transactions:** increase default wait confidence to 1 ([f6e42cb](https://github.com/FilOzone/synapse-sdk/commit/f6e42cbb311b38c641b9f2dea09da9b7e1443924))
+
 ## [0.9.0](https://github.com/FilOzone/synapse-sdk/compare/v0.8.1...v0.9.0) (2025-06-12)
 
 ### Features
