@@ -1,3 +1,13 @@
+## [0.10.0](https://github.com/FilOzone/synapse-sdk/compare/v0.9.1...v0.10.0) (2025-06-14)
+
+### Features
+
+* **admin:** expose addServiceProvider on PandoraService ([0270e7b](https://github.com/FilOzone/synapse-sdk/commit/0270e7bb52e8abc25464a48813e427a91748e604))
+
+### Trivial Changes
+
+* **admin:** remove pandora-admin html in preference of gh-pages branch ([1708857](https://github.com/FilOzone/synapse-sdk/commit/170885779921dd75d4b3a2a6ada2fd9608499259))
+
 ## [0.9.1](https://github.com/FilOzone/synapse-sdk/compare/v0.9.0...v0.9.1) (2025-06-13)
 
 ### Trivial Changes
