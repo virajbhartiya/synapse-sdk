@@ -1,3 +1,17 @@
+## [0.11.0](https://github.com/FilOzone/synapse-sdk/compare/v0.10.0...v0.11.0) (2025-06-16)
+
+### Features
+
+* **retriever:** implement PieceRetriever pattern for flexible piece downloads ([16d9a84](https://github.com/FilOzone/synapse-sdk/commit/16d9a8430f6d3b4833bb3f2d495463c764c1d08f))
+
+### Bug Fixes
+
+* **retriever:** use Promise.any instead of Promise.race for provider selection ([c291821](https://github.com/FilOzone/synapse-sdk/commit/c2918219ef9e69a1b30f8c0edd8f635dc670d5db))
+
+### Trivial Changes
+
+* **pdp:** use extracted utility functions for url building ([7e96345](https://github.com/FilOzone/synapse-sdk/commit/7e963457d357cf753bb68a3d06dfdb1739c8a9c7))
+
 ## [0.10.0](https://github.com/FilOzone/synapse-sdk/compare/v0.9.1...v0.10.0) (2025-06-14)
 
 ### Features
