@@ -1,3 +1,9 @@
+## [0.12.0](https://github.com/FilOzone/synapse-sdk/compare/v0.11.0...v0.12.0) (2025-06-18)
+
+### Features
+
+* **cdn:** add complete FilCDN retriever implementation ([#106](https://github.com/FilOzone/synapse-sdk/issues/106)) ([e2ff94b](https://github.com/FilOzone/synapse-sdk/commit/e2ff94bb78cbcfdc41a0b7c9e08753b66e6e8d96))
+
 ## [0.11.0](https://github.com/FilOzone/synapse-sdk/compare/v0.10.0...v0.11.0) (2025-06-16)
 
 ### Features
