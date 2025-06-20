@@ -50,6 +50,8 @@ export interface SynapseOptions {
   withCDN?: boolean
   /** Override Pandora service contract address (defaults to network's default) */
   pandoraAddress?: string
+  /** Override Payments contract address (defaults to network's default) */
+  paymentsAddress?: string
   /** Optional override for piece retrieval */
   pieceRetriever?: PieceRetriever
 }

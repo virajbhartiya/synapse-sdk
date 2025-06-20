@@ -26,6 +26,7 @@ export class PaymentsService {
   private readonly _signer: ethers.Signer
   private readonly _network: FilecoinNetworkType
   private readonly _disableNonceManager: boolean
+  private readonly _paymentsAddress: string
   // Cached contract instances
   private _usdfcContract: ethers.Contract | null = null
   private _paymentsContract: ethers.Contract | null = null
@@ -34,12 +35,14 @@ export class PaymentsService {
     provider: ethers.Provider,
     signer: ethers.Signer,
     network: FilecoinNetworkType,
-    disableNonceManager: boolean
+    disableNonceManager: boolean,
+    paymentsAddress: string
   ) {
     this._provider = provider
     this._signer = signer
     this._network = network
     this._disableNonceManager = disableNonceManager
+    this._paymentsAddress = paymentsAddress
   }
 
   /**
@@ -61,11 +64,7 @@ export class PaymentsService {
    */
   private _getPaymentsContract (): ethers.Contract {
     if (this._paymentsContract == null) {
-      const paymentsAddress = CONTRACT_ADDRESSES.PAYMENTS[this._network]
-      if (paymentsAddress == null || paymentsAddress === '') {
-        throw new Error(`Payments contract not deployed on ${this._network} network. Currently only Calibration testnet is supported.`)
-      }
-      this._paymentsContract = new ethers.Contract(paymentsAddress, CONTRACT_ABIS.PAYMENTS, this._signer)
+      this._paymentsContract = new ethers.Contract(this._paymentsAddress, CONTRACT_ABIS.PAYMENTS, this._signer)
     }
     return this._paymentsContract
   }
@@ -568,10 +567,7 @@ export class PaymentsService {
     }
 
     const signerAddress = await this._signer.getAddress()
-    const paymentsAddress = CONTRACT_ADDRESSES.PAYMENTS[this._network]
-    if (paymentsAddress == null || paymentsAddress === '') {
-      throw createError('PaymentsService', 'generatePermit', `Payments contract not deployed on ${this._network}`)
-    }
+    const paymentsAddress = this._paymentsAddress
 
     const usdfcContract = this._getUsdfcContract()
 
@@ -809,9 +805,8 @@ export class PaymentsService {
   /**
    * Deposit tokens using EIP-2612 permit for gasless approval
    *
-   * This is the recommended way to deposit USDFC tokens. It combines approval
-   * and deposit into a single transaction using EIP-2612 permit signatures,
-   * eliminating the need for a separate approval transaction.
+   * This is the recommended way to deposit USDFC tokens. It executes the
+   * deposit in a single transaction using permit signatures.
    *
    * @param amount - Amount to deposit
    * @param token - Token identifier (defaults to USDFC)
@@ -841,6 +836,10 @@ export class PaymentsService {
       callbacks?: PermitDepositCallbacks
     }
   ): Promise<ethers.TransactionResponse> {
+    if (token !== TOKENS.USDFC) {
+      throw createError('PaymentsService', 'depositWithPermit', `Token "${token}" is not supported. Currently only USDFC supports permits.`)
+    }
+
     const deadlineMinutes = options?.deadlineMinutes ?? 30
     const callbacks = options?.callbacks
 
@@ -851,7 +850,9 @@ export class PaymentsService {
     callbacks?.onPermitSigning?.()
     const signedPermit = await this._signPermit(permitContext)
 
-    // Execute deposit
-    return await this._executeDepositWithPermit(amount, signedPermit, token, callbacks)
+    // Execute the deposit with the signed permit
+    const tx = await this._executeDepositWithPermit(amount, signedPermit, token, callbacks)
+
+    return tx
   }
 }

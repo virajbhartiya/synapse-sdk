@@ -258,9 +258,9 @@
             <!-- Deposit/Withdraw Tab -->
             <div class="tab-content active" id="depositTab">
                 <div>
-                    <h3>Deposit USDFC with Permit (Recommended)</h3>
+                    <h3>Deposit USDFC with Permit (Recommended - Single Transaction)</h3>
                     <div class="info-box">
-                        <strong>🚀 New!</strong> Deposits USDFC using EIP-2612 permit signatures. This combines approval and deposit into a single transaction for better UX.
+                        <strong>🚀 New!</strong> Deposits USDFC using EIP-2612 permit signatures in a single transaction. This reduces MetaMask popups from 2 (approve + deposit) to 1 (sign permit + deposit) for better UX.
                     </div>
                     <div class="form-group">
                         <label>Amount (USDFC):</label>
@@ -270,15 +270,15 @@
                         <label>Permit Deadline (minutes):</label>
                         <input type="number" id="permitDeadline" placeholder="30" value="30" min="1" max="60">
                     </div>
-                    <button onclick="depositWithPermit()">Deposit with Permit (1 Transaction)</button>
+                    <button onclick="depositWithPermit()">Deposit with Permit (Single Transaction)</button>
                     <div id="depositPermitResult"></div>
                 </div>
 
                 <div class="grid">
                     <div>
-                        <h3>Traditional Deposit</h3>
+                        <h3>Traditional Deposit (2 Transactions)</h3>
                         <div class="info-box">
-                            Traditional two-step process: First approves the payments contract, then deposits USDFC. Use the Permit method above for a better experience.
+                            Traditional process: First approves token spending (if needed), then deposits USDFC. Use the Permit method above for a better experience with a single transaction.
                         </div>
                         <div class="form-group">
                             <label>Amount (USDFC):</label>
@@ -563,7 +563,7 @@
                                     `<div class="result info">${statusMessages.join('<br>')}</div>`;
                             },
                             onDepositStarting: () => {
-                                statusMessages.push('✅ Permit signed! Sending deposit transaction...');
+                                statusMessages.push('💰 Permit signed! Executing deposit with permit...');
                                 document.getElementById('depositPermitResult').innerHTML =
                                     `<div class="result info">${statusMessages.join('<br>')}</div>`;
                             }
@@ -572,9 +572,9 @@
                 );
 
                 showSuccess('depositPermitResult',
-                    `Deposit with permit sent! 🎉<br>` +
-                    `<a href="${getExplorerUrl(tx.hash)}" target="_blank" class="tx-link">View transaction</a><br>` +
-                    `<small>Single transaction combining approval and deposit</small>`
+                    `Deposit with permit complete! 🎉<br>` +
+                    `<a href="${getExplorerUrl(tx.hash)}" target="_blank" class="tx-link">View deposit transaction</a><br>` +
+                    `<small>Used permit signature for gasless approval (single transaction)</small>`
                 );
 
                 // Wait for confirmation
