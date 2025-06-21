@@ -20,7 +20,6 @@ import type {
   UploadResult,
   RootData,
   CommP,
-  ProofsetData,
   ProofsetRoot
 } from '../types.js'
 import type { Synapse } from '../synapse.js'
@@ -934,7 +933,7 @@ export class StorageService {
    */
   async getProofsetRoots (proofsetId: string): Promise<string[]> {
     const proofsetData = await this._pdpServer.getProofSet(proofsetId)
-    return proofsetData.roots || []
+    return proofsetData.roots ?? []
   }
 
   /**
@@ -944,8 +943,8 @@ export class StorageService {
    */
   async getProofsetRootsWithMetadata (proofsetId: string): Promise<ProofsetRoot[]> {
     const proofsetData = await this._pdpServer.getProofSet(proofsetId)
-    const roots = proofsetData.roots || []
-    
+    const roots = proofsetData.roots ?? []
+
     return roots.map((rootCid, index) => ({
       rootCid,
       metadata: proofsetData.metadata?.[index]
