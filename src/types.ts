@@ -292,3 +292,29 @@ export interface UploadResult {
   /** Root ID in the proof set */
   rootId?: number
 }
+
+/**
+ * Proof set data returned from the API
+ */
+export interface ProofsetData {
+  /** The proof set ID */
+  id: number
+  /** Array of root data in the proof set */
+  roots: ProofsetRootData[]
+  /** Next challenge epoch */
+  nextChallengeEpoch: number
+}
+
+/**
+ * Individual proof set root data from API
+ */
+export interface ProofsetRootData {
+  /** Root ID within the proof set */
+  rootId: number
+  /** The root CID */
+  rootCid: string
+  /** Sub-root CID (usually same as rootCid) */
+  subrootCid: string
+  /** Sub-root offset */
+  subrootOffset: number
+}

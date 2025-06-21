@@ -10,6 +10,7 @@ import type {
   RootAdditionStatusResponse,
   FindPieceResponse
 } from './server.js'
+import type { ProofsetData, ProofsetRootData } from '../types.js'
 import { asCommP } from '../commp/commp.js'
 
 /**
@@ -190,4 +191,92 @@ export function validateFindPieceResponse (value: unknown): FindPieceResponse {
     pieceCid: commP,
     piece_cid: obj.piece_cid // Keep legacy field if it exists
   }
+}
+
+/**
+ * Type guard for ProofsetRootData
+ * Validates individual proof set root data
+ *
+ * @param value - The value to validate
+ * @returns True if the value matches ProofsetRootData interface
+ */
+export function isProofsetRootData (value: unknown): value is ProofsetRootData {
+  if (typeof value !== 'object' || value == null) {
+    return false
+  }
+
+  const obj = value as Record<string, unknown>
+
+  // Required fields
+  if (typeof obj.rootId !== 'number') {
+    return false
+  }
+  if (typeof obj.rootCid !== 'string') {
+    return false
+  }
+  if (typeof obj.subrootCid !== 'string') {
+    return false
+  }
+  if (typeof obj.subrootOffset !== 'number') {
+    return false
+  }
+
+  // Validate that CIDs are valid CommPs
+  if (asCommP(obj.rootCid) == null) {
+    return false
+  }
+  if (asCommP(obj.subrootCid) == null) {
+    return false
+  }
+
+  return true
+}
+
+/**
+ * Type guard for ProofsetData
+ * Validates the response from getting proof set data
+ *
+ * @param value - The value to validate
+ * @returns True if the value matches ProofsetData interface
+ */
+export function isProofsetData (value: unknown): value is ProofsetData {
+  if (typeof value !== 'object' || value == null) {
+    return false
+  }
+
+  const obj = value as Record<string, unknown>
+
+  // Required field - id
+  if (typeof obj.id !== 'number') {
+    return false
+  }
+
+  // Required field - roots (array of ProofsetRootData)
+  if (!Array.isArray(obj.roots)) {
+    return false
+  }
+  for (const root of obj.roots) {
+    if (!isProofsetRootData(root)) {
+      return false
+    }
+  }
+
+  // Required field - nextChallengeEpoch
+  if (typeof obj.nextChallengeEpoch !== 'number') {
+    return false
+  }
+
+  return true
+}
+
+/**
+ * Validates and returns a ProofsetData
+ * @param value - The value to validate
+ * @throws Error if validation fails
+ */
+export function validateProofsetData (value: unknown): ProofsetData {
+  if (!isProofsetData(value)) {
+    throw new Error('Invalid proof set data response format')
+  }
+  return value
 }

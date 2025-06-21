@@ -18,5 +18,8 @@ export {
   isFindPieceResponse,
   validateProofSetCreationStatusResponse,
   validateRootAdditionStatusResponse,
-  validateFindPieceResponse
+  validateFindPieceResponse,
+  isProofsetRootData,
+  isProofsetData,
+  validateProofsetData
 } from './validation.js'
