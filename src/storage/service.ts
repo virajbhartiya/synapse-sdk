@@ -19,14 +19,14 @@ import type {
   UploadCallbacks,
   UploadResult,
   RootData,
-  CommP,
-  ProofsetRoot
+  CommP
 } from '../types.js'
 import type { Synapse } from '../synapse.js'
 import type { PandoraService } from '../pandora/service.js'
 import { PDPServer } from '../pdp/server.js'
 import { PDPAuthHelper } from '../pdp/auth.js'
 import { createError } from '../utils/index.js'
+import { asCommP } from '../commp/index.js'
 import { SIZE_CONSTANTS, TIMING_CONSTANTS } from '../utils/constants.js'
 
 export class StorageService {
@@ -927,27 +927,22 @@ export class StorageService {
   }
 
   /**
-   * Get proofset roots for a given proofset ID
-   * @param proofsetId - The ID of the proof set to fetch roots for
-   * @returns Array of root CIDs
+   * Get proof set roots for a given proof set ID
+   * @param proofSetId - The ID of the proof set to fetch roots for
+   * @returns Array of root CIDs as CommP objects
    */
-  async getProofsetRoots (proofsetId: string): Promise<string[]> {
-    const proofsetData = await this._pdpServer.getProofSet(proofsetId)
-    return proofsetData.roots ?? []
-  }
-
-  /**
-   * Get proofset roots with metadata for a given proofset ID
-   * @param proofsetId - The ID of the proof set to fetch roots for
-   * @returns Array of roots with metadata
-   */
-  async getProofsetRootsWithMetadata (proofsetId: string): Promise<ProofsetRoot[]> {
-    const proofsetData = await this._pdpServer.getProofSet(proofsetId)
-    const roots = proofsetData.roots ?? []
-
-    return roots.map((rootCid, index) => ({
-      rootCid,
-      metadata: proofsetData.metadata?.[index]
-    }))
+  async getProofSetRoots (proofSetId: string): Promise<CommP[]> {
+    const proofSetData = await this._pdpServer.getProofSet(proofSetId)
+    return proofSetData.roots.map(root => {
+      const commP = asCommP(root.rootCid)
+      if (commP == null) {
+        throw createError(
+          'StorageService',
+          'getProofSetRoots',
+          `Invalid CommP received from server: ${root.rootCid}`
+        )
+      }
+      return commP
+    })
   }
 }
