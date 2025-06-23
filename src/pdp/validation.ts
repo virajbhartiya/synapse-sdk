@@ -10,7 +10,7 @@ import type {
   RootAdditionStatusResponse,
   FindPieceResponse
 } from './server.js'
-import type { ProofsetData, ProofsetRootData } from '../types.js'
+import type { ProofSetData, ProofSetRootData } from '../types.js'
 import { asCommP } from '../commp/commp.js'
 
 /**
@@ -31,7 +31,7 @@ export function isProofSetCreationStatusResponse (value: unknown): value is Proo
   if (typeof obj.createMessageHash !== 'string') {
     return false
   }
-  if (typeof obj.proofsetCreated !== 'boolean') {
+  if (typeof obj.proofSetCreated !== 'boolean') {
     return false
   }
   if (typeof obj.service !== 'string') {
@@ -194,13 +194,13 @@ export function validateFindPieceResponse (value: unknown): FindPieceResponse {
 }
 
 /**
- * Type guard for ProofsetRootData
+ * Type guard for ProofSetRootData
  * Validates individual proof set root data
  *
  * @param value - The value to validate
- * @returns True if the value matches ProofsetRootData interface
+ * @returns True if the value matches ProofSetRootData interface
  */
-export function isProofsetRootData (value: unknown): value is ProofsetRootData {
+export function isProofSetRootData (value: unknown): value is ProofSetRootData {
   if (typeof value !== 'object' || value == null) {
     return false
   }
@@ -233,13 +233,13 @@ export function isProofsetRootData (value: unknown): value is ProofsetRootData {
 }
 
 /**
- * Type guard for ProofsetData
+ * Type guard for ProofSetData
  * Validates the response from getting proof set data
  *
  * @param value - The value to validate
- * @returns True if the value matches ProofsetData interface
+ * @returns True if the value matches ProofSetData interface
  */
-export function isProofsetData (value: unknown): value is ProofsetData {
+export function isProofSetData (value: unknown): value is ProofSetData {
   if (typeof value !== 'object' || value == null) {
     return false
   }
@@ -251,12 +251,12 @@ export function isProofsetData (value: unknown): value is ProofsetData {
     return false
   }
 
-  // Required field - roots (array of ProofsetRootData)
+  // Required field - roots (array of ProofSetRootData)
   if (!Array.isArray(obj.roots)) {
     return false
   }
   for (const root of obj.roots) {
-    if (!isProofsetRootData(root)) {
+    if (!isProofSetRootData(root)) {
       return false
     }
   }
@@ -270,12 +270,12 @@ export function isProofsetData (value: unknown): value is ProofsetData {
 }
 
 /**
- * Validates and returns a ProofsetData
+ * Validates and returns a ProofSetData
  * @param value - The value to validate
  * @throws Error if validation fails
  */
-export function validateProofsetData (value: unknown): ProofsetData {
-  if (!isProofsetData(value)) {
+export function validateProofSetData (value: unknown): ProofSetData {
+  if (!isProofSetData(value)) {
     throw new Error('Invalid proof set data response format')
   }
   return value

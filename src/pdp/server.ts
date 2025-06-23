@@ -28,12 +28,12 @@
 
 import { ethers } from 'ethers'
 import type { PDPAuthHelper } from './auth.js'
-import type { RootData, CommP, ProofsetData } from '../types.js'
+import type { RootData, CommP, ProofSetData } from '../types.js'
 import { asCommP, calculate as calculateCommP, downloadAndValidateCommP } from '../commp/index.js'
 import { constructPieceUrl, constructFindPieceUrl } from '../utils/piece.js'
 import { MULTIHASH_CODES } from '../utils/index.js'
 import { toHex } from 'multiformats/bytes'
-import { validateProofSetCreationStatusResponse, validateRootAdditionStatusResponse, validateFindPieceResponse, validateProofsetData } from './validation.js'
+import { validateProofSetCreationStatusResponse, validateRootAdditionStatusResponse, validateFindPieceResponse, validateProofSetData } from './validation.js'
 
 /**
  * Response from creating a proof set
@@ -52,7 +52,7 @@ export interface ProofSetCreationStatusResponse {
   /** Transaction hash that created the proof set */
   createMessageHash: string
   /** Whether the proof set has been created on-chain */
-  proofsetCreated: boolean
+  proofSetCreated: boolean
   /** Service label that created the proof set */
   service: string
   /** Transaction status (pending, confirmed, failed) */
@@ -525,7 +525,7 @@ export class PDPServer {
    * @param proofSetId - The ID of the proof set to fetch
    * @returns Promise that resolves with proof set data
    */
-  async getProofSet (proofSetId: string): Promise<ProofsetData> {
+  async getProofSet (proofSetId: string): Promise<ProofSetData> {
     const response = await fetch(`${this._apiEndpoint}/pdp/proof-sets/${proofSetId}`, {
       method: 'GET',
       headers: {
@@ -543,7 +543,7 @@ export class PDPServer {
     }
 
     const data = await response.json()
-    return validateProofsetData(data)
+    return validateProofSetData(data)
   }
 
   /**

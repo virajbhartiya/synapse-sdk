@@ -19,7 +19,7 @@ export {
   validateProofSetCreationStatusResponse,
   validateRootAdditionStatusResponse,
   validateFindPieceResponse,
-  isProofsetRootData,
-  isProofsetData,
-  validateProofsetData
+  isProofSetRootData,
+  isProofSetData,
+  validateProofSetData
 } from './validation.js'

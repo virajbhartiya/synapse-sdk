@@ -8,8 +8,7 @@ import {
   type StorageServiceOptions,
   type FilecoinNetworkType,
   type PieceRetriever,
-  type CommP,
-
+  type CommP
 } from './types.js'
 import { StorageService } from './storage/index.js'
 import { PaymentsService } from './payments/index.js'
