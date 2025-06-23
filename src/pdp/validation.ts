@@ -10,7 +10,7 @@ import type {
   RootAdditionStatusResponse,
   FindPieceResponse
 } from './server.js'
-import { asCommP } from '../commp/commp.js'
+import { asCommP } from '../commp/index.js'
 
 /**
  * Type guard for ProofSetCreationStatusResponse
