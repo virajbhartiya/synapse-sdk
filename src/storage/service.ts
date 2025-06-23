@@ -584,25 +584,34 @@ export class StorageService {
         if (b.currentRootCount > 0 && a.currentRootCount === 0) return 1
         return a.pdpVerifierProofSetId - b.pdpVerifierProofSetId
       })
-      const selected = sorted[0]
 
-      // Get the provider for this proof set
-      const providerId = await pandoraService.getProviderIdByAddress(selected.payee)
-      if (providerId === 0) {
-        throw createError(
-          'StorageService',
-          'smartSelectProvider',
-          `Provider ${selected.payee} for proof set ${selected.pdpVerifierProofSetId} is not currently approved`
-        )
+      // Try existing providers in order, pinging each one
+      for (const proofSet of sorted) {
+        // Get the provider for this proof set
+        const providerId = await pandoraService.getProviderIdByAddress(proofSet.payee)
+        if (providerId === 0) {
+          console.warn(`Provider ${proofSet.payee} for proof set ${proofSet.pdpVerifierProofSetId} is not currently approved, skipping`)
+          continue
+        }
+
+        const provider = await pandoraService.getApprovedProvider(providerId)
+
+        // Test ping to this existing provider
+        try {
+          await StorageService.pingProvider(provider, signer)
+          return {
+            provider,
+            proofSetId: proofSet.pdpVerifierProofSetId,
+            isExisting: true
+          }
+        } catch (error) {
+          console.warn(`Existing provider ${provider.owner} for proof set ${proofSet.pdpVerifierProofSetId} failed ping test:`, error instanceof Error ? error.message : String(error))
+          // Continue to next proof set/provider
+        }
       }
 
-      const provider = await pandoraService.getApprovedProvider(providerId)
-
-      return {
-        provider,
-        proofSetId: selected.pdpVerifierProofSetId,
-        isExisting: true
-      }
+      // All existing providers failed ping, fall through to select new provider
+      console.warn('All existing providers failed ping validation, selecting new provider')
     }
 
     // Step 2: No existing proof sets, need to select a provider for new proof set
@@ -627,33 +636,110 @@ export class StorageService {
   }
 
   /**
-   * Select a random provider from the given list
+   * Select a random provider from the given list with ping validation
    */
   private static async selectRandomProvider (
     providers: ApprovedProviderInfo[],
     signer: ethers.Signer
   ): Promise<ApprovedProviderInfo> {
-    let randomIndex: number
+    return await StorageService.selectRandomProviderWithPing(providers, signer, [])
+  }
 
-    // Try crypto.getRandomValues if available (HTTPS contexts)
-    if (typeof globalThis.crypto !== 'undefined' && globalThis.crypto.getRandomValues != null) {
-      const randomBytes = new Uint8Array(1)
-      globalThis.crypto.getRandomValues(randomBytes)
-      randomIndex = randomBytes[0] % providers.length
-    } else {
-      // Fallback for HTTP contexts - use multiple entropy sources
-      const timestamp = Date.now()
-      const random = Math.random()
-      // Use wallet address as additional entropy
-      const addressBytes = await signer.getAddress()
-      const addressSum = addressBytes.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
+  /**
+   * Select a random provider from the given list with ping validation and exclusion support
+   * @param providers - List of available providers
+   * @param signer - Signer for entropy generation
+   * @param excludedProviderAddresses - List of provider addresses to exclude from selection
+   * @returns A provider that responds to ping
+   * @throws Error if no providers are reachable
+   */
+  private static async selectRandomProviderWithPing (
+    providers: ApprovedProviderInfo[],
+    signer: ethers.Signer,
+    excludedProviderAddresses: string[]
+  ): Promise<ApprovedProviderInfo> {
+    // Filter out excluded providers
+    const availableProviders = providers.filter(p => !excludedProviderAddresses.includes(p.owner))
 
-      // Combine sources for better distribution
-      const combined = (timestamp * random * addressSum) % providers.length
-      randomIndex = Math.floor(Math.abs(combined))
+    if (availableProviders.length === 0) {
+      throw createError(
+        'StorageService',
+        'selectRandomProviderWithPing',
+        'No reachable storage providers available after ping validation'
+      )
     }
 
-    return providers[randomIndex]
+    // Try providers until we find one that responds to ping
+    const triedProviderAddresses: string[] = []
+
+    while (triedProviderAddresses.length < availableProviders.length) {
+      let randomIndex: number
+
+      // Try crypto.getRandomValues if available (HTTPS contexts)
+      if (typeof globalThis.crypto !== 'undefined' && globalThis.crypto.getRandomValues != null) {
+        const randomBytes = new Uint8Array(1)
+        globalThis.crypto.getRandomValues(randomBytes)
+        randomIndex = randomBytes[0] % availableProviders.length
+      } else {
+        // Fallback for HTTP contexts - use multiple entropy sources
+        const timestamp = Date.now()
+        const random = Math.random()
+        // Use wallet address as additional entropy
+        const addressBytes = await signer.getAddress()
+        const addressSum = addressBytes.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
+
+        // Combine sources for better distribution
+        const combined = (timestamp * random * addressSum) % availableProviders.length
+        randomIndex = Math.floor(Math.abs(combined))
+      }
+
+      const candidateProvider = availableProviders[randomIndex]
+
+      // Skip if we've already tried this provider
+      if (triedProviderAddresses.includes(candidateProvider.owner)) {
+        continue
+      }
+
+      triedProviderAddresses.push(candidateProvider.owner)
+
+      // Test ping to this provider
+      try {
+        await StorageService.pingProvider(candidateProvider, signer)
+        return candidateProvider
+      } catch (error) {
+        console.warn(`Provider ${candidateProvider.owner} failed ping test:`, error instanceof Error ? error.message : String(error))
+        // Continue to try next provider
+      }
+    }
+
+    // All providers failed ping test
+    throw createError(
+      'StorageService',
+      'selectRandomProviderWithPing',
+      `All ${availableProviders.length} available storage providers failed ping validation`
+    )
+  }
+
+  /**
+   * Ping a storage provider to test connectivity
+   * @param provider - Provider to ping
+   * @param signer - Signer for creating temporary PDPServer instance
+   * @throws Error if provider is not reachable
+   */
+  private static async pingProvider (
+    provider: ApprovedProviderInfo,
+    signer: ethers.Signer
+  ): Promise<void> {
+    // Create a temporary PDPAuthHelper and PDPServer just for pinging
+    // We need these to create a PDPServer instance, but for ping we don't need valid auth
+    const tempPandoraAddress = '0x0000000000000000000000000000000000000000' // Dummy address for ping
+    const tempChainId = BigInt(1) // Dummy chain ID for ping
+
+    const authHelper = new PDPAuthHelper(tempPandoraAddress, signer, tempChainId)
+    const pdpServer = new PDPServer(authHelper, provider.pdpUrl, provider.pieceRetrievalUrl)
+
+    // Perform the ping
+    await pdpServer.ping()
   }
 
   /**
