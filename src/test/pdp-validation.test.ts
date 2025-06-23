@@ -6,7 +6,10 @@ import {
   isFindPieceResponse,
   validateProofSetCreationStatusResponse,
   validateRootAdditionStatusResponse,
-  validateFindPieceResponse
+  validateFindPieceResponse,
+  isProofSetRootData,
+  isProofSetData,
+  validateProofSetData
 } from '../pdp/validation.js'
 
 describe('PDP Validation', function () {
@@ -14,7 +17,7 @@ describe('PDP Validation', function () {
     it('should validate a valid response', function () {
       const validResponse = {
         createMessageHash: '0x123abc',
-        proofsetCreated: true,
+        proofSetCreated: true,
         service: 'pandora',
         txStatus: 'confirmed',
         ok: true,
@@ -31,7 +34,7 @@ describe('PDP Validation', function () {
     it('should validate response with null ok field', function () {
       const validResponse = {
         createMessageHash: '0x123abc',
-        proofsetCreated: false,
+        proofSetCreated: false,
         service: 'pandora',
         txStatus: 'pending',
         ok: null
@@ -53,17 +56,17 @@ describe('PDP Validation', function () {
         [],
         {}, // Empty object
         { createMessageHash: 123 }, // Wrong type
-        { createMessageHash: '0x123', proofsetCreated: 'yes' }, // Wrong type
+        { createMessageHash: '0x123', proofSetCreated: 'yes' }, // Wrong type
         {
           createMessageHash: '0x123',
-          proofsetCreated: true,
+          proofSetCreated: true,
           service: 'pandora',
           txStatus: 'pending'
           // Missing ok field
         },
         {
           createMessageHash: '0x123',
-          proofsetCreated: true,
+          proofSetCreated: true,
           service: 'pandora',
           txStatus: 'pending',
           ok: null,
@@ -230,6 +233,136 @@ describe('PDP Validation', function () {
       assert.equal(normalized.pieceCid.code, 0xf101) // fil-commitment-unsealed
       assert.equal(normalized.pieceCid.multihash.code, 0x1012) // sha2-256-trunc254-padded
       assert.equal(normalized.pieceCid.toString(), validResponse.pieceCid)
+    })
+  })
+
+  describe('ProofSetRootData validation', function () {
+    it('should validate a valid root data object', function () {
+      const validRootData = {
+        rootId: 101,
+        rootCid: 'baga6ea4seaqh5lmkfwaovjuigyp4hzclc6hqnhoqcm3re3ipumhp3kfka7wdvjq',
+        subrootCid: 'baga6ea4seaqh5lmkfwaovjuigyp4hzclc6hqnhoqcm3re3ipumhp3kfka7wdvjq',
+        subrootOffset: 0
+      }
+
+      assert.isTrue(isProofSetRootData(validRootData))
+    })
+
+    it('should reject invalid root data objects', function () {
+      const invalidRootData = [
+        null,
+        undefined,
+        'string',
+        123,
+        [],
+        {},
+        { rootId: '101' }, // Wrong type
+        { rootId: 101, rootCid: 123 }, // Wrong type
+        { rootId: 101, rootCid: 'invalid-cid' }, // Invalid CommP
+        {
+          rootId: 101,
+          rootCid: 'baga6ea4seaqh5lmkfwaovjuigyp4hzclc6hqnhoqcm3re3ipumhp3kfka7wdvjq',
+          subrootCid: 'invalid-cid' // Invalid CommP
+        },
+        {
+          rootId: 101,
+          rootCid: 'baga6ea4seaqh5lmkfwaovjuigyp4hzclc6hqnhoqcm3re3ipumhp3kfka7wdvjq',
+          subrootCid: 'baga6ea4seaqh5lmkfwaovjuigyp4hzclc6hqnhoqcm3re3ipumhp3kfka7wdvjq',
+          subrootOffset: 'zero' // Wrong type
+        }
+      ]
+
+      for (const invalid of invalidRootData) {
+        assert.isFalse(isProofSetRootData(invalid))
+      }
+    })
+  })
+
+  describe('ProofSetData validation', function () {
+    it('should validate a valid proof set data object', function () {
+      const validProofSetData = {
+        id: 292,
+        roots: [
+          {
+            rootId: 101,
+            rootCid: 'baga6ea4seaqh5lmkfwaovjuigyp4hzclc6hqnhoqcm3re3ipumhp3kfka7wdvjq',
+            subrootCid: 'baga6ea4seaqh5lmkfwaovjuigyp4hzclc6hqnhoqcm3re3ipumhp3kfka7wdvjq',
+            subrootOffset: 0
+          },
+          {
+            rootId: 102,
+            rootCid: 'baga6ea4seaqkt24j5gbf2ye2wual5gn7a5yl2tqb52v2sk4nvur4bdy7lg76cdy',
+            subrootCid: 'baga6ea4seaqkt24j5gbf2ye2wual5gn7a5yl2tqb52v2sk4nvur4bdy7lg76cdy',
+            subrootOffset: 0
+          }
+        ],
+        nextChallengeEpoch: 1500
+      }
+
+      assert.isTrue(isProofSetData(validProofSetData))
+      assert.deepEqual(
+        validateProofSetData(validProofSetData),
+        validProofSetData
+      )
+    })
+
+    it('should validate proof set data with empty roots array', function () {
+      const validProofSetData = {
+        id: 292,
+        roots: [],
+        nextChallengeEpoch: 1500
+      }
+
+      assert.isTrue(isProofSetData(validProofSetData))
+      assert.deepEqual(
+        validateProofSetData(validProofSetData),
+        validProofSetData
+      )
+    })
+
+    it('should reject invalid proof set data objects', function () {
+      const invalidProofSetData = [
+        null,
+        undefined,
+        'string',
+        123,
+        [],
+        {},
+        { id: '292' }, // Wrong type
+        { id: 292, roots: 'not-array' }, // Wrong type
+        { id: 292, roots: [], nextChallengeEpoch: 'soon' }, // Wrong type
+        {
+          id: 292,
+          roots: [
+            {
+              rootId: 101,
+              rootCid: 'invalid-cid', // Invalid CommP
+              subrootCid: 'baga6ea4seaqh5lmkfwaovjuigyp4hzclc6hqnhoqcm3re3ipumhp3kfka7wdvjq',
+              subrootOffset: 0
+            }
+          ],
+          nextChallengeEpoch: 1500
+        }
+      ]
+
+      for (const invalid of invalidProofSetData) {
+        assert.isFalse(isProofSetData(invalid))
+        assert.throws(() => validateProofSetData(invalid))
+      }
+    })
+
+    it('should throw specific error for invalid proof set data', function () {
+      const invalidProofSetData = {
+        id: 292,
+        roots: 'not-an-array',
+        nextChallengeEpoch: 1500
+      }
+
+      assert.throws(
+        () => validateProofSetData(invalidProofSetData),
+        Error,
+        'Invalid proof set data response format'
+      )
     })
   })
 })
