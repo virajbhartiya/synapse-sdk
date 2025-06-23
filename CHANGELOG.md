@@ -1,3 +1,17 @@
+## [0.13.0](https://github.com/FilOzone/synapse-sdk/compare/v0.12.0...v0.13.0) (2025-06-23)
+
+### Features
+
+* enhance checkAllowanceForStorage with customizable lockup periods ([52c3204](https://github.com/FilOzone/synapse-sdk/commit/52c3204c94dc389259414b3f447a8174d3a649b0))
+
+### Bug Fixes
+
+* correct depositAmountNeeded assignment in PandoraService ([bdc1827](https://github.com/FilOzone/synapse-sdk/commit/bdc1827173b7062ba6d018d60e06ab67baf846ad))
+
+### Tests
+
+* add checks for depositAmountNeeded in PandoraService tests ([e07ae2d](https://github.com/FilOzone/synapse-sdk/commit/e07ae2d7dfa78a6d4cd4d61c0564a2f2f2b7e1b1))
+
 ## [0.12.0](https://github.com/FilOzone/synapse-sdk/compare/v0.11.0...v0.12.0) (2025-06-18)
 
 ### Features
