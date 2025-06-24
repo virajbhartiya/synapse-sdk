@@ -1150,7 +1150,7 @@ describe('PDPServer', () => {
       }
 
       try {
-        const result = await pdpServer.getProofSet('292')
+        const result = await pdpServer.getProofSet(292)
         assert.deepStrictEqual(result, mockProofSetData)
       } finally {
         global.fetch = originalFetch
@@ -1168,7 +1168,7 @@ describe('PDPServer', () => {
       }
 
       try {
-        await pdpServer.getProofSet('999')
+        await pdpServer.getProofSet(999)
         assert.fail('Should have thrown error for not found proof set')
       } catch (error) {
         assert.include((error as Error).message, 'Proof set not found: 999')
@@ -1190,7 +1190,7 @@ describe('PDPServer', () => {
       }
 
       try {
-        await pdpServer.getProofSet('292')
+        await pdpServer.getProofSet(292)
         assert.fail('Should have thrown error for server error')
       } catch (error) {
         assert.include((error as Error).message, 'Failed to fetch proof set')
@@ -1219,7 +1219,7 @@ describe('PDPServer', () => {
       }
 
       try {
-        await pdpServer.getProofSet('292')
+        await pdpServer.getProofSet(292)
         assert.fail('Should have thrown error for invalid response data')
       } catch (error) {
         assert.include((error as Error).message, 'Invalid proof set data response format')
@@ -1246,7 +1246,7 @@ describe('PDPServer', () => {
       }
 
       try {
-        const result = await pdpServer.getProofSet('292')
+        const result = await pdpServer.getProofSet(292)
         assert.deepStrictEqual(result, emptyProofSetData)
         assert.isArray(result.roots)
         assert.equal(result.roots.length, 0)
@@ -1280,7 +1280,7 @@ describe('PDPServer', () => {
       }
 
       try {
-        await pdpServer.getProofSet('292')
+        await pdpServer.getProofSet(292)
         assert.fail('Should have thrown error for invalid CID in response')
       } catch (error) {
         assert.include((error as Error).message, 'Invalid proof set data response format')

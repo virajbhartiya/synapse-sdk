@@ -1745,12 +1745,12 @@ describe('StorageService', () => {
 
       // Mock the PDP server getProofSet method
       const serviceAny = service as any
-      serviceAny._pdpServer.getProofSet = async (proofSetId: string): Promise<any> => {
-        assert.equal(proofSetId, '292')
+      serviceAny._pdpServer.getProofSet = async (proofSetId: number): Promise<any> => {
+        assert.equal(proofSetId, 123)
         return mockProofSetData
       }
 
-      const result = await service.getProofSetRoots('292')
+      const result = await service.getProofSetRoots()
 
       assert.isArray(result)
       assert.equal(result.length, 2)
@@ -1774,7 +1774,7 @@ describe('StorageService', () => {
         return mockProofSetData
       }
 
-      const result = await service.getProofSetRoots('292')
+      const result = await service.getProofSetRoots()
 
       assert.isArray(result)
       assert.equal(result.length, 0)
@@ -1804,7 +1804,7 @@ describe('StorageService', () => {
       }
 
       try {
-        await service.getProofSetRoots('292')
+        await service.getProofSetRoots()
         assert.fail('Should have thrown error for invalid CID')
       } catch (error: any) {
         assert.include(error.message, 'Invalid CommP received from server')
@@ -1823,7 +1823,7 @@ describe('StorageService', () => {
       }
 
       try {
-        await service.getProofSetRoots('999')
+        await service.getProofSetRoots()
         assert.fail('Should have thrown error for server error')
       } catch (error: any) {
         assert.include(error.message, 'Proof set not found: 999')

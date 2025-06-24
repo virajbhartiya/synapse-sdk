@@ -927,12 +927,11 @@ export class StorageService {
   }
 
   /**
-   * Get proof set roots for a given proof set ID
-   * @param proofSetId - The ID of the proof set to fetch roots for
+   * Get proof set roots for this storage service's proof set
    * @returns Array of root CIDs as CommP objects
    */
-  async getProofSetRoots (proofSetId: string): Promise<CommP[]> {
-    const proofSetData = await this._pdpServer.getProofSet(proofSetId)
+  async getProofSetRoots (): Promise<CommP[]> {
+    const proofSetData = await this._pdpServer.getProofSet(this._proofSetId)
     return proofSetData.roots.map(root => {
       const commP = asCommP(root.rootCid)
       if (commP == null) {

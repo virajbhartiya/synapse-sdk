@@ -285,16 +285,6 @@ export class Synapse {
 
     return await downloadAndValidateCommP(response, parsedCommP)
   }
-
-  /**
-   * Get proof set roots for a given proof set ID
-   * @param proofSetId - The ID of the proof set to fetch roots for
-   * @returns Array of root CIDs as CommP objects
-   */
-  async getProofSetRoots (proofSetId: string): Promise<CommP[]> {
-    const storage = await this.createStorage()
-    return await storage.getProofSetRoots(proofSetId)
-  }
 }
 
 // Export as default

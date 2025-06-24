@@ -525,7 +525,7 @@ export class PDPServer {
    * @param proofSetId - The ID of the proof set to fetch
    * @returns Promise that resolves with proof set data
    */
-  async getProofSet (proofSetId: string): Promise<ProofSetData> {
+  async getProofSet (proofSetId: number): Promise<ProofSetData> {
     const response = await fetch(`${this._apiEndpoint}/pdp/proof-sets/${proofSetId}`, {
       method: 'GET',
       headers: {
