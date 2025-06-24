@@ -1,3 +1,13 @@
+## [0.14.0](https://github.com/FilOzone/synapse-sdk/compare/v0.13.0...v0.14.0) (2025-06-24)
+
+### Features
+
+* **pdp:** always validate and return CommP (CID) objects from server ([d3b30da](https://github.com/FilOzone/synapse-sdk/commit/d3b30da047c9a719641b99b92781ea07b8e8ee7f))
+
+### Trivial Changes
+
+* **pdp:** validate server responses ([d2e135b](https://github.com/FilOzone/synapse-sdk/commit/d2e135b91a94a9ba2c7f9f81f9c0ab2d4c5d411c))
+
 ## [0.13.0](https://github.com/FilOzone/synapse-sdk/compare/v0.12.0...v0.13.0) (2025-06-23)
 
 ### Features
