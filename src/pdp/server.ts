@@ -133,11 +133,14 @@ export class PDPServer {
     retrievalEndpoint: string,
     serviceName: string = 'public'
   ) {
-    if (apiEndpoint.trim() === '') {
-      throw new Error('PDP API endpoint is required')
-    }
-    if (retrievalEndpoint.trim() === '') {
-      throw new Error('PDP retrieval endpoint is required')
+    // Allow empty endpoints only for null auth (ping validation scenarios)
+    if (authHelper !== null) {
+      if (apiEndpoint.trim() === '') {
+        throw new Error('PDP API endpoint is required')
+      }
+      if (retrievalEndpoint.trim() === '') {
+        throw new Error('PDP retrieval endpoint is required')
+      }
     }
     // Remove trailing slash from endpoints
     this._apiEndpoint = apiEndpoint.replace(/\/$/, '')
