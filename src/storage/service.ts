@@ -686,7 +686,7 @@ export class StorageService {
 
     // Use the shared provider selection logic with random sorting
     const randomlySorted = await StorageService.randomlySortProviders(providers, signer)
-    
+
     // Create a temporary PDPServer for ping validation
     const tempPdpServer = new PDPServer(null, '', '')
     return await StorageService.selectProviderWithPing(randomlySorted, excludedProviderAddresses, tempPdpServer)
