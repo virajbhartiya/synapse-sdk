@@ -1,3 +1,9 @@
+## [0.15.0](https://github.com/FilOzone/synapse-sdk/compare/v0.14.0...v0.15.0) (2025-06-25)
+
+### Features
+
+* **pdp:** add ping method to check connectivity with SP ([46a3223](https://github.com/FilOzone/synapse-sdk/commit/46a322322c75c6824924da054ca33974855a5aca))
+
 ## [0.14.0](https://github.com/FilOzone/synapse-sdk/compare/v0.13.0...v0.14.0) (2025-06-24)
 
 ### Features
