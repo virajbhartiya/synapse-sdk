@@ -1916,11 +1916,9 @@ describe('StorageService', () => {
         ]
 
         try {
-          await (StorageService as any).selectRandomProvider(
+          await (StorageService as any).selectProviderWithPing(
             testProviders,
-            mockSynapse.getSigner(),
-            [testProviders[0].owner], // Exclude the only provider
-            true // Enable ping validation
+            [testProviders[0].owner] // Exclude the only provider
           )
           assert.fail('Should have thrown error')
         } catch (error: any) {

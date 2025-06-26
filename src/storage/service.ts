@@ -588,6 +588,10 @@ export class StorageService {
       // Convert sorted proof sets to providers and use shared selection logic
       const existingProviders: ApprovedProviderInfo[] = []
       for (const proofSet of sorted) {
+        const providerAddress = proofSet.payee.toLowerCase()
+        if (existingProviders.some(p => p.owner.toLowerCase() === providerAddress)) {
+          continue
+        }
         const providerId = await pandoraService.getProviderIdByAddress(proofSet.payee)
         if (providerId === 0) {
           console.warn(`Provider ${proofSet.payee} for proof set ${proofSet.pdpVerifierProofSetId} is not currently approved, skipping`)
@@ -653,16 +657,12 @@ export class StorageService {
    * Select a random provider from the given list with ping validation
    * @param providers - List of available providers
    * @param signer - Signer for entropy generation
-   * @param excludedProviderAddresses - List of provider addresses to exclude from selection
-   * @param enablePingValidation - Whether to validate provider connectivity with ping
    * @returns A provider that responds to ping
    * @throws Error if no providers are reachable
    */
   private static async selectRandomProvider (
     providers: ApprovedProviderInfo[],
-    signer: ethers.Signer,
-    excludedProviderAddresses: string[] = [],
-    enablePingValidation: boolean = false
+    signer: ethers.Signer
   ): Promise<ApprovedProviderInfo> {
     if (providers.length === 0) {
       throw createError(
@@ -672,25 +672,8 @@ export class StorageService {
       )
     }
 
-    // If no ping validation requested, just return randomly selected provider
-    if (!enablePingValidation) {
-      return await StorageService.randomlySelectFromProviders(providers, signer)
-    }
-
-    // Use the shared provider selection logic with random sorting
-    const randomlySorted = await StorageService.randomlySortProviders(providers, signer)
-
-    return await StorageService.selectProviderWithPing(randomlySorted, excludedProviderAddresses)
-  }
-
-  /**
-   * Randomly sort providers using the same entropy sources as before
-   */
-  private static async randomlySortProviders (
-    providers: ApprovedProviderInfo[],
-    signer: ethers.Signer
-  ): Promise<ApprovedProviderInfo[]> {
-    const result: ApprovedProviderInfo[] = []
+    // Randomly sort providers inline
+    const randomlySorted: ApprovedProviderInfo[] = []
     const remaining = [...providers]
 
     while (remaining.length > 0) {
@@ -714,40 +697,10 @@ export class StorageService {
         randomIndex = Math.floor(Math.abs(combined))
       }
 
-      result.push(remaining.splice(randomIndex, 1)[0])
+      randomlySorted.push(remaining.splice(randomIndex, 1)[0])
     }
 
-    return result
-  }
-
-  /**
-   * Randomly select a single provider from a list (for cases without ping validation)
-   */
-  private static async randomlySelectFromProviders (
-    providers: ApprovedProviderInfo[],
-    signer: ethers.Signer
-  ): Promise<ApprovedProviderInfo> {
-    let randomIndex: number
-
-    // Try crypto.getRandomValues if available (HTTPS contexts)
-    if (typeof globalThis.crypto !== 'undefined' && globalThis.crypto.getRandomValues != null) {
-      const randomBytes = new Uint8Array(1)
-      globalThis.crypto.getRandomValues(randomBytes)
-      randomIndex = randomBytes[0] % providers.length
-    } else {
-      // Fallback for HTTP contexts - use multiple entropy sources
-      const timestamp = Date.now()
-      const random = Math.random()
-      // Use wallet address as additional entropy
-      const addressBytes = await signer.getAddress()
-      const addressSum = addressBytes.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
-
-      // Combine sources for better distribution
-      const combined = (timestamp * random * addressSum) % providers.length
-      randomIndex = Math.floor(Math.abs(combined))
-    }
-
-    return providers[randomIndex]
+    return await StorageService.selectProviderWithPing(randomlySorted, [])
   }
 
   /**
