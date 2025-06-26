@@ -608,7 +608,7 @@ export class StorageService {
         try {
           const selectedProvider = await StorageService.selectProviderWithPing(existingProviders, [], pdpServer)
 
-          // Find the proof set ID for this provider
+          // Find the first matching proof set ID for this provider
           const matchingProofSet = sorted.find(ps =>
             ps.payee.toLowerCase() === selectedProvider.owner.toLowerCase()
           )
@@ -661,7 +661,7 @@ export class StorageService {
    * @param providers - List of available providers
    * @param signer - Signer for entropy generation
    * @param excludedProviderAddresses - List of provider addresses to exclude from selection
-   * @param pdpServer - PDPServer instance for ping validation
+   * @param enablePingValidation - Whether to validate provider connectivity with ping
    * @returns A provider that responds to ping
    * @throws Error if no providers are reachable
    */
