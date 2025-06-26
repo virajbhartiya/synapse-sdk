@@ -121,16 +121,12 @@ export class StorageService {
     const signer = synapse.getSigner()
     const signerAddress = await signer.getAddress()
 
-    // Create a PDPServer instance for ping validation (with null auth since ping doesn't need it)
-    const pingPdpServer = new PDPServer(null, '', '')
-
     // Use the new resolution logic
     const resolution = await StorageService.resolveProviderAndProofSet(
       synapse,
       pandoraService,
       signerAddress,
-      options,
-      pingPdpServer
+      options
     )
 
     // Notify callback about provider selection
@@ -338,8 +334,7 @@ export class StorageService {
     synapse: Synapse,
     pandoraService: PandoraService,
     signerAddress: string,
-    options: StorageServiceOptions,
-    pdpServer: PDPServer
+    options: StorageServiceOptions
   ): Promise<{
       provider: ApprovedProviderInfo
       proofSetId: number
@@ -380,8 +375,7 @@ export class StorageService {
       pandoraService,
       signerAddress,
       options.withCDN ?? false,
-      synapse.getSigner(),
-      pdpServer
+      synapse.getSigner()
     )
   }
 
@@ -569,8 +563,7 @@ export class StorageService {
     pandoraService: PandoraService,
     signerAddress: string,
     withCDN: boolean,
-    signer: ethers.Signer,
-    pdpServer: PDPServer
+    signer: ethers.Signer
   ): Promise<{
       provider: ApprovedProviderInfo
       proofSetId: number
@@ -606,7 +599,7 @@ export class StorageService {
 
       if (existingProviders.length > 0) {
         try {
-          const selectedProvider = await StorageService.selectProviderWithPing(existingProviders, [], pdpServer)
+          const selectedProvider = await StorageService.selectProviderWithPing(existingProviders, [])
 
           // Find the first matching proof set ID for this provider
           const matchingProofSet = sorted.find(ps =>
@@ -687,9 +680,7 @@ export class StorageService {
     // Use the shared provider selection logic with random sorting
     const randomlySorted = await StorageService.randomlySortProviders(providers, signer)
 
-    // Create a temporary PDPServer for ping validation
-    const tempPdpServer = new PDPServer(null, '', '')
-    return await StorageService.selectProviderWithPing(randomlySorted, excludedProviderAddresses, tempPdpServer)
+    return await StorageService.selectProviderWithPing(randomlySorted, excludedProviderAddresses)
   }
 
   /**
@@ -769,8 +760,7 @@ export class StorageService {
    */
   private static async selectProviderWithPing (
     sortedProviders: ApprovedProviderInfo[],
-    excludedProviderAddresses: string[],
-    pdpServer: PDPServer
+    excludedProviderAddresses: string[]
   ): Promise<ApprovedProviderInfo> {
     // Filter out excluded providers
     const availableProviders = sortedProviders.filter(p => !excludedProviderAddresses.includes(p.owner))
