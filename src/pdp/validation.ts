@@ -252,13 +252,8 @@ export function isProofSetData (value: unknown): value is ProofSetData {
   }
 
   // Required field - roots (array of ProofSetRootData)
-  if (!Array.isArray(obj.roots)) {
+  if (!Array.isArray(obj.roots) || !obj.roots.every(isProofSetRootData)) {
     return false
-  }
-  for (const root of obj.roots) {
-    if (!isProofSetRootData(root)) {
-      return false
-    }
   }
 
   // Required field - nextChallengeEpoch
