@@ -627,9 +627,6 @@ export class StorageService {
           console.warn('All existing providers failed ping validation, selecting new provider')
         }
       }
-
-      // All existing providers failed ping, fall through to select new provider
-      console.warn('All existing providers failed ping validation, selecting new provider')
     }
 
     // Step 2: No existing proof sets, need to select a provider for new proof set

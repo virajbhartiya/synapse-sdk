@@ -2044,7 +2044,8 @@ describe('StorageService', () => {
         const mockPandoraService = {
           getClientProofSetsWithDetails: async () => proofSets,
           getProviderIdByAddress: async () => 1,
-          getApprovedProvider: async () => testProvider
+          getApprovedProvider: async () => testProvider,
+          getAllApprovedProviders: async () => [] // Return empty list to prevent fallback
         } as any
 
         const originalFetch = global.fetch
@@ -2070,6 +2071,107 @@ describe('StorageService', () => {
           assert.equal(result.provider.owner, testProvider.owner)
           assert.equal(result.proofSetId, 100)
           assert.isTrue(result.isExisting)
+        } finally {
+          global.fetch = originalFetch
+        }
+      })
+    })
+
+    describe('selectProviderWithPing', () => {
+      // ... existing code ...
+
+      it('should deduplicate providers from multiple proof sets', async () => {
+        const testProvider: ApprovedProviderInfo = {
+          owner: '0x1111111111111111111111111111111111111111',
+          pdpUrl: 'https://pdp1.example.com',
+          pieceRetrievalUrl: 'https://retrieve1.example.com',
+          registeredAt: 1234567890,
+          approvedAt: 1234567891
+        }
+
+        // Create multiple proof sets with the same provider
+        const proofSets = [
+          {
+            railId: 1,
+            payer: '0x1234567890123456789012345678901234567890',
+            payee: testProvider.owner,
+            pdpVerifierProofSetId: 100,
+            nextRootId: 0,
+            currentRootCount: 5,
+            isLive: true,
+            isManaged: true,
+            withCDN: false,
+            commissionBps: 0,
+            metadata: '',
+            rootMetadata: [],
+            clientDataSetId: 1
+          },
+          {
+            railId: 2,
+            payer: '0x1234567890123456789012345678901234567890',
+            payee: testProvider.owner, // Same provider
+            pdpVerifierProofSetId: 101,
+            nextRootId: 0,
+            currentRootCount: 3,
+            isLive: true,
+            isManaged: true,
+            withCDN: false,
+            commissionBps: 0,
+            metadata: '',
+            rootMetadata: [],
+            clientDataSetId: 2
+          },
+          {
+            railId: 3,
+            payer: '0x1234567890123456789012345678901234567890',
+            payee: testProvider.owner, // Same provider
+            pdpVerifierProofSetId: 102,
+            nextRootId: 0,
+            currentRootCount: 1,
+            isLive: true,
+            isManaged: true,
+            withCDN: false,
+            commissionBps: 0,
+            metadata: '',
+            rootMetadata: [],
+            clientDataSetId: 3
+          }
+        ]
+
+        const mockPandoraService = {
+          getClientProofSetsWithDetails: async () => proofSets,
+          getProviderIdByAddress: async () => 1,
+          getApprovedProvider: async () => testProvider,
+          getAllApprovedProviders: async () => [] // Return empty list to prevent fallback
+        } as any
+
+        let pingCount = 0
+        const originalFetch = global.fetch
+        global.fetch = async (input: string | URL | Request) => {
+          const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+
+          if (url.includes('/ping')) {
+            pingCount++
+            // Make the ping fail to ensure we see all ping attempts
+            return { status: 500, statusText: 'Internal Server Error' } as any
+          }
+
+          throw new Error(`Unexpected URL: ${url}`)
+        }
+
+        try {
+          await (StorageService as any).smartSelectProvider(
+            mockPandoraService,
+            '0x1234567890123456789012345678901234567890',
+            false,
+            mockSynapse.getSigner()
+          )
+          assert.fail('Should have thrown error')
+        } catch (error: any) {
+          // Verify we only pinged once despite having three proof sets with the same provider
+          assert.equal(pingCount, 1, 'Should only ping each unique provider once')
+          // The error should come from getAllApprovedProviders being empty after the ping fails
+          assert.include(error.message, 'No approved storage providers available')
         } finally {
           global.fetch = originalFetch
         }
