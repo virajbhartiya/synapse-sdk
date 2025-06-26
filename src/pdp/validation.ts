@@ -194,84 +194,102 @@ export function validateFindPieceResponse (value: unknown): FindPieceResponse {
 }
 
 /**
- * Type guard for ProofSetRootData
- * Validates individual proof set root data
+ * Converts and validates individual proof set root data
+ * Returns null if validation fails
  *
- * @param value - The value to validate
- * @returns True if the value matches ProofSetRootData interface
+ * @param value - The value to validate and convert
+ * @returns Converted ProofSetRootData or null if invalid
  */
-export function isProofSetRootData (value: unknown): value is ProofSetRootData {
+export function asProofSetRootData (value: unknown): ProofSetRootData | null {
   if (typeof value !== 'object' || value == null) {
-    return false
+    return null
   }
 
   const obj = value as Record<string, unknown>
 
   // Required fields
   if (typeof obj.rootId !== 'number') {
-    return false
+    return null
   }
   if (typeof obj.rootCid !== 'string') {
-    return false
+    return null
   }
   if (typeof obj.subrootCid !== 'string') {
-    return false
+    return null
   }
   if (typeof obj.subrootOffset !== 'number') {
-    return false
+    return null
   }
 
-  // Validate that CIDs are valid CommPs
-  if (asCommP(obj.rootCid) == null) {
-    return false
-  }
-  if (asCommP(obj.subrootCid) == null) {
-    return false
+  // Convert CIDs to CommP objects
+  const rootCid = asCommP(obj.rootCid)
+  const subrootCid = asCommP(obj.subrootCid)
+  if (rootCid == null || subrootCid == null) {
+    return null
   }
 
-  return true
+  return {
+    rootId: obj.rootId,
+    rootCid,
+    subrootCid,
+    subrootOffset: obj.subrootOffset
+  }
 }
 
 /**
- * Type guard for ProofSetData
- * Validates the response from getting proof set data
+ * Converts and validates proof set data
+ * Returns null if validation fails
  *
- * @param value - The value to validate
- * @returns True if the value matches ProofSetData interface
+ * @param value - The value to validate and convert
+ * @returns Converted ProofSetData or null if invalid
  */
-export function isProofSetData (value: unknown): value is ProofSetData {
+export function asProofSetData (value: unknown): ProofSetData | null {
   if (typeof value !== 'object' || value == null) {
-    return false
+    return null
   }
 
   const obj = value as Record<string, unknown>
 
   // Required field - id
   if (typeof obj.id !== 'number') {
-    return false
+    return null
   }
 
   // Required field - roots (array of ProofSetRootData)
-  if (!Array.isArray(obj.roots) || !obj.roots.every(isProofSetRootData)) {
-    return false
+  if (!Array.isArray(obj.roots)) {
+    return null
+  }
+
+  const convertedRoots: ProofSetRootData[] = []
+  for (const root of obj.roots) {
+    const convertedRoot = asProofSetRootData(root)
+    if (convertedRoot == null) {
+      return null
+    }
+    convertedRoots.push(convertedRoot)
   }
 
   // Required field - nextChallengeEpoch
   if (typeof obj.nextChallengeEpoch !== 'number') {
-    return false
+    return null
   }
 
-  return true
+  return {
+    id: obj.id,
+    roots: convertedRoots,
+    nextChallengeEpoch: obj.nextChallengeEpoch
+  }
 }
 
 /**
  * Validates and returns a ProofSetData
- * @param value - The value to validate
+ * @param value - The value to validate and convert
  * @throws Error if validation fails
  */
 export function validateProofSetData (value: unknown): ProofSetData {
-  if (!isProofSetData(value)) {
+  const converted = asProofSetData(value)
+  if (converted == null) {
     throw new Error('Invalid proof set data response format')
   }
-  return value
+  return converted
 }

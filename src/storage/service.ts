@@ -938,7 +938,7 @@ export class StorageService {
         throw createError(
           'StorageService',
           'getProofSetRoots',
-          `Invalid CommP received from server: ${root.rootCid}`
+          `Invalid CommP received from server: ${root.rootCid.toString()}`
         )
       }
       return commP

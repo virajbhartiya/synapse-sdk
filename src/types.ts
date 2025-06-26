@@ -312,9 +312,9 @@ export interface ProofSetRootData {
   /** Root ID within the proof set */
   rootId: number
   /** The root CID */
-  rootCid: string
+  rootCid: CommP
   /** Sub-root CID (usually same as rootCid) */
-  subrootCid: string
+  subrootCid: CommP
   /** Sub-root offset */
   subrootOffset: number
 }

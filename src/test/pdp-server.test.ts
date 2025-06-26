@@ -1151,7 +1151,13 @@ describe('PDPServer', () => {
 
       try {
         const result = await pdpServer.getProofSet(292)
-        assert.deepStrictEqual(result, mockProofSetData)
+        assert.equal(result.id, mockProofSetData.id)
+        assert.equal(result.nextChallengeEpoch, mockProofSetData.nextChallengeEpoch)
+        assert.equal(result.roots.length, mockProofSetData.roots.length)
+        assert.equal(result.roots[0].rootId, mockProofSetData.roots[0].rootId)
+        assert.equal(result.roots[0].rootCid.toString(), mockProofSetData.roots[0].rootCid)
+        assert.equal(result.roots[0].subrootCid.toString(), mockProofSetData.roots[0].subrootCid)
+        assert.equal(result.roots[0].subrootOffset, mockProofSetData.roots[0].subrootOffset)
       } finally {
         global.fetch = originalFetch
       }
