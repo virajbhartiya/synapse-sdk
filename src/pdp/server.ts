@@ -578,7 +578,7 @@ export class PDPServer {
    * @throws Error if provider is not reachable or returns non-200 status
    */
   async ping (): Promise<void> {
-    const response = await fetch(`${this._apiEndpoint}/ping`, {
+    const response = await fetch(`${this._apiEndpoint}/pdp/ping`, {
       method: 'GET',
       headers: {}
     })
