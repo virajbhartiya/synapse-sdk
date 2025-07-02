@@ -133,14 +133,11 @@ export class PDPServer {
     retrievalEndpoint: string,
     serviceName: string = 'public'
   ) {
-    // Allow empty endpoints only for null auth (ping validation scenarios)
-    if (authHelper !== null) {
-      if (apiEndpoint.trim() === '') {
-        throw new Error('PDP API endpoint is required')
-      }
-      if (retrievalEndpoint.trim() === '') {
-        throw new Error('PDP retrieval endpoint is required')
-      }
+    if (apiEndpoint.trim() === '') {
+      throw new Error('PDP API endpoint is required')
+    }
+    if (retrievalEndpoint.trim() === '') {
+      throw new Error('PDP retrieval endpoint is required')
     }
     // Remove trailing slash from endpoints
     this._apiEndpoint = apiEndpoint.replace(/\/$/, '')
@@ -598,7 +595,7 @@ export class PDPServer {
 
   getAuthHelper (): PDPAuthHelper {
     if (this._authHelper == null) {
-      throw new Error('Auth helper is not initialized')
+      throw new Error('AuthHelper is not available for an operation that requires signing')
     }
     return this._authHelper
   }

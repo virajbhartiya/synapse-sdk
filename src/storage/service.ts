@@ -602,29 +602,25 @@ export class StorageService {
       }
 
       if (existingProviders.length > 0) {
-        try {
-          const selectedProvider = await StorageService.selectProviderWithPing(existingProviders, [])
+        const selectedProvider = await StorageService.selectProviderWithPing(existingProviders, [])
 
-          // Find the first matching proof set ID for this provider
-          const matchingProofSet = sorted.find(ps =>
-            ps.payee.toLowerCase() === selectedProvider.owner.toLowerCase()
+        // Find the first matching proof set ID for this provider
+        const matchingProofSet = sorted.find(ps =>
+          ps.payee.toLowerCase() === selectedProvider.owner.toLowerCase()
+        )
+
+        if (matchingProofSet == null) {
+          throw createError(
+            'StorageService',
+            'smartSelectProvider',
+            'Selected provider not found in proof sets'
           )
+        }
 
-          if (matchingProofSet == null) {
-            throw createError(
-              'StorageService',
-              'smartSelectProvider',
-              'Selected provider not found in proof sets'
-            )
-          }
-
-          return {
-            provider: selectedProvider,
-            proofSetId: matchingProofSet.pdpVerifierProofSetId,
-            isExisting: true
-          }
-        } catch (error) {
-          console.warn('All existing providers failed ping validation, selecting new provider')
+        return {
+          provider: selectedProvider,
+          proofSetId: matchingProofSet.pdpVerifierProofSetId,
+          isExisting: true
         }
       }
     }
