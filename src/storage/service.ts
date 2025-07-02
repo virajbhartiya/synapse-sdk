@@ -602,7 +602,7 @@ export class StorageService {
       }
 
       if (existingProviders.length > 0) {
-        const selectedProvider = await StorageService.selectProviderWithPing(existingProviders, [])
+        const selectedProvider = await StorageService.selectProviderWithPing(existingProviders)
 
         // Find the first matching proof set ID for this provider
         const matchingProofSet = sorted.find(ps =>
@@ -693,25 +693,18 @@ export class StorageService {
       randomlySorted.push(remaining.splice(randomIndex, 1)[0])
     }
 
-    return await StorageService.selectProviderWithPing(randomlySorted, [])
+    return await StorageService.selectProviderWithPing(randomlySorted)
   }
 
   /**
-   * Select a provider from a sorted list with ping validation and exclusion support
-   * This is shared logic used by both smart selection and random selection
+   * Select a provider from a sorted list with ping validation.
+   * This is shared logic used by both smart selection and random selection.
    * @param sortedProviders - List of providers to try in order
-   * @param excludedProviderAddresses - List of provider addresses to exclude from selection
    * @returns A provider that responds to ping
    * @throws Error if no providers are reachable
    */
-  private static async selectProviderWithPing (
-    sortedProviders: ApprovedProviderInfo[],
-    excludedProviderAddresses: string[]
-  ): Promise<ApprovedProviderInfo> {
-    // Filter out excluded providers
-    const availableProviders = sortedProviders.filter(p => !excludedProviderAddresses.includes(p.owner))
-
-    if (availableProviders.length === 0) {
+  private static async selectProviderWithPing (sortedProviders: ApprovedProviderInfo[]): Promise<ApprovedProviderInfo> {
+    if (sortedProviders.length === 0) {
       throw createError(
         'StorageService',
         'selectProviderWithPing',
@@ -720,7 +713,7 @@ export class StorageService {
     }
 
     // Try providers in order until we find one that responds to ping
-    for (const provider of availableProviders) {
+    for (const provider of sortedProviders) {
       try {
         // Create a temporary PDPServer for this specific provider's endpoint
         const providerPdpServer = new PDPServer(null, provider.pdpUrl, provider.pieceRetrievalUrl)
@@ -736,7 +729,7 @@ export class StorageService {
     throw createError(
       'StorageService',
       'selectProviderWithPing',
-      `All ${availableProviders.length} available storage providers failed ping validation`
+      `All ${sortedProviders.length} available storage providers failed ping validation`
     )
   }
 

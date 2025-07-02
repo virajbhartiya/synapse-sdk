@@ -1892,9 +1892,7 @@ describe('StorageService', () => {
         try {
           await (StorageService as any).selectRandomProvider(
             testProviders,
-            mockSynapse.getSigner(),
-            [],
-            true // Enable ping validation
+            mockSynapse.getSigner()
           )
           assert.fail('Should have thrown error')
         } catch (error: any) {
@@ -1903,32 +1901,10 @@ describe('StorageService', () => {
           global.fetch = originalFetch
         }
       })
-
-      it('should throw error when no providers available after exclusion', async () => {
-        const testProviders: ApprovedProviderInfo[] = [
-          {
-            owner: '0x1111111111111111111111111111111111111111',
-            pdpUrl: 'https://pdp1.example.com',
-            pieceRetrievalUrl: 'https://retrieve1.example.com',
-            registeredAt: 1234567890,
-            approvedAt: 1234567891
-          }
-        ]
-
-        try {
-          await (StorageService as any).selectProviderWithPing(
-            testProviders,
-            [testProviders[0].owner] // Exclude the only provider
-          )
-          assert.fail('Should have thrown error')
-        } catch (error: any) {
-          assert.include(error.message, 'No reachable storage providers available after ping validation')
-        }
-      })
     })
 
     describe('smartSelectProvider with ping validation', () => {
-      it('should ping existing providers and fallback to new selection if all fail', async () => {
+      it('should fail when existing providers fail ping validation', async () => {
         const testProviders: ApprovedProviderInfo[] = [
           {
             owner: '0x1111111111111111111111111111111111111111',
@@ -1981,12 +1957,68 @@ describe('StorageService', () => {
 
           if (url.includes('/ping')) {
             pingCallCount++
-            // First provider (existing) fails, second provider (new selection) succeeds
+            // All providers fail ping
+            return { status: 500, statusText: 'Internal Server Error', text: async () => 'Down' } as any
+          }
+
+          throw new Error(`Unexpected URL: ${url}`)
+        }
+
+        try {
+          await (StorageService as any).smartSelectProvider(
+            mockPandoraService,
+            '0x1234567890123456789012345678901234567890',
+            false,
+            mockSynapse.getSigner()
+          )
+          assert.fail('Should have thrown error')
+        } catch (error: any) {
+          // Should fail with selectProviderWithPing error, not fallback to new selection
+          assert.include(error.message, 'All 1 available storage providers failed ping validation')
+          assert.isAtLeast(pingCallCount, 1, 'Should have pinged at least one provider')
+        } finally {
+          global.fetch = originalFetch
+        }
+      })
+
+      it('should select new provider when no existing providers are available', async () => {
+        const testProviders: ApprovedProviderInfo[] = [
+          {
+            owner: '0x1111111111111111111111111111111111111111',
+            pdpUrl: 'https://pdp1.example.com',
+            pieceRetrievalUrl: 'https://retrieve1.example.com',
+            registeredAt: 1234567890,
+            approvedAt: 1234567891
+          },
+          {
+            owner: '0x2222222222222222222222222222222222222222',
+            pdpUrl: 'https://pdp2.example.com',
+            pieceRetrievalUrl: 'https://retrieve2.example.com',
+            registeredAt: 1234567892,
+            approvedAt: 1234567893
+          }
+        ]
+
+        const mockPandoraService = {
+          getClientProofSetsWithDetails: async () => [], // No existing proof sets
+          getAllApprovedProviders: async () => testProviders,
+          getProviderIdByAddress: async () => 0,
+          getApprovedProvider: async () => null
+        } as any
+
+        let pingCallCount = 0
+        const originalFetch = global.fetch
+        global.fetch = async (input: string | URL | Request) => {
+          const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+
+          if (url.includes('/ping')) {
+            pingCallCount++
+            // First provider succeeds
             if (url.includes('pdp1.example.com')) {
-              return { status: 500, statusText: 'Internal Server Error', text: async () => 'Down' } as any
-            } else if (url.includes('pdp2.example.com')) {
               return { status: 200, statusText: 'OK' } as any
             }
+            // Other providers can fail
+            return { status: 500, statusText: 'Internal Server Error' } as any
           }
 
           throw new Error(`Unexpected URL: ${url}`)
@@ -2000,8 +2032,7 @@ describe('StorageService', () => {
             mockSynapse.getSigner()
           )
 
-          // Should have fallen back to new provider selection since existing provider failed ping
-          // The specific provider selected will depend on random selection, so just check it's one of the providers
+          // Should have selected one of the available providers for new proof set
           assert.isTrue(
             testProviders.some(p => p.owner === result.provider.owner),
             'Should have selected one of the available providers'
@@ -2170,8 +2201,8 @@ describe('StorageService', () => {
         } catch (error: any) {
           // Verify we only pinged once despite having three proof sets with the same provider
           assert.equal(pingCount, 1, 'Should only ping each unique provider once')
-          // The error should come from getAllApprovedProviders being empty after the ping fails
-          assert.include(error.message, 'No approved storage providers available')
+          // The error should come from selectProviderWithPing failing, not from getAllApprovedProviders
+          assert.include(error.message, 'All 1 available storage providers failed ping validation')
         } finally {
           global.fetch = originalFetch
         }
