@@ -54,7 +54,7 @@ describe('PDPServer', () => {
     serverUrl = await mockServer.start(0) // Use random port
 
     // Create PDPServer instance
-    pdpServer = new PDPServer(authHelper, serverUrl + '/pdp', serverUrl)
+    pdpServer = new PDPServer(authHelper, serverUrl + '/api', serverUrl + '/retrieval')
   })
 
   afterEach(async () => {
@@ -63,13 +63,13 @@ describe('PDPServer', () => {
 
   describe('constructor', () => {
     it('should create PDPServer with valid API endpoint', () => {
-      const tool = new PDPServer(authHelper, 'https://example.com/pdp', 'https://example.com')
-      assert.strictEqual(tool.getApiEndpoint(), 'https://example.com/pdp')
+      const tool = new PDPServer(authHelper, 'https://example.com/foo', 'https://example.com/bar')
+      assert.strictEqual(tool.getApiEndpoint(), 'https://example.com/foo')
     })
 
     it('should remove trailing slash from API endpoint', () => {
-      const tool = new PDPServer(authHelper, 'https://example.com/pdp/', 'https://example.com/')
-      assert.strictEqual(tool.getApiEndpoint(), 'https://example.com/pdp')
+      const tool = new PDPServer(authHelper, 'https://example.com/foo/', 'https://example.com/bar')
+      assert.strictEqual(tool.getApiEndpoint(), 'https://example.com/foo')
     })
 
     it('should throw error for empty API endpoint', () => {
@@ -96,7 +96,7 @@ describe('PDPServer', () => {
       const originalFetch = global.fetch
       global.fetch = async (input: string | URL | Request, init?: RequestInit) => {
         const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
-        assert.include(url, '/pdp/proof-sets')
+        assert.include(url, '/api/pdp/proof-sets')
         assert.strictEqual(init?.method, 'POST')
 
         const body = JSON.parse(init?.body as string)
@@ -148,7 +148,7 @@ describe('PDPServer', () => {
       const originalFetch = global.fetch
       global.fetch = async (input: string | URL | Request, init?: RequestInit) => {
         const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
-        assert.include(url, `/pdp/proof-sets/1/roots/added/${mockTxHash}`)
+        assert.include(url, `/api/pdp/proof-sets/1/roots/added/${mockTxHash}`)
         assert.strictEqual(init?.method, 'GET')
 
         return {
@@ -303,7 +303,7 @@ describe('PDPServer', () => {
       const originalFetch = global.fetch
       global.fetch = async (input: string | URL | Request, init?: RequestInit) => {
         const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
-        assert.include(url, '/pdp/proof-sets/1/roots')
+        assert.include(url, '/api/pdp/proof-sets/1/roots')
         assert.strictEqual(init?.method, 'POST')
 
         const body = JSON.parse(init?.body as string)
@@ -425,7 +425,7 @@ describe('PDPServer', () => {
       const originalFetch = global.fetch
       global.fetch = async (input: string | URL | Request, init?: RequestInit) => {
         const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
-        assert.include(url, '/pdp/proof-sets/1/roots')
+        assert.include(url, '/api/pdp/proof-sets/1/roots')
         assert.strictEqual(init?.method, 'POST')
 
         return {
@@ -543,7 +543,7 @@ describe('PDPServer', () => {
       const originalFetch = global.fetch
       global.fetch = async (input: string | URL | Request, init?: RequestInit) => {
         const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
-        assert.include(url, `/pdp/proof-sets/created/${mockTxHash}`)
+        assert.include(url, `/api/pdp/proof-sets/created/${mockTxHash}`)
         assert.strictEqual(init?.method, 'GET')
 
         return {
@@ -594,7 +594,7 @@ describe('PDPServer', () => {
       const originalFetch = global.fetch
       global.fetch = async (input: string | URL | Request, init?: RequestInit) => {
         const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
-        assert.include(url, '/pdp/piece?')
+        assert.include(url, '/api/pdp/piece?')
         assert.include(url, 'name=sha2-256-trunc254-padded')
         assert.include(url, 'size=1048576')
         assert.strictEqual(init?.method, 'GET')
@@ -681,7 +681,7 @@ describe('PDPServer', () => {
 
   describe('getters', () => {
     it('should return API endpoint', () => {
-      assert.strictEqual(pdpServer.getApiEndpoint(), serverUrl + '/pdp')
+      assert.strictEqual(pdpServer.getApiEndpoint(), serverUrl + '/api')
     })
 
     it('should return PDPAuthHelper instance', () => {
@@ -714,14 +714,14 @@ describe('PDPServer', () => {
             headers: {
               get: (name: string) => {
                 if (name === 'Location') {
-                  return `/pdp/piece/upload/${mockUuid}`
+                  return `/api/pdp/piece/upload/${mockUuid}`
                 }
                 return null
               }
             },
             text: async () => 'Created'
           } as any
-        } else if (urlStr.includes(`/pdp/piece/upload/${String(mockUuid)}`) === true) {
+        } else if (urlStr.includes(`/api/pdp/piece/upload/${String(mockUuid)}`) === true) {
           // Upload data - return 204 No Content
           return {
             ok: true,
@@ -767,14 +767,14 @@ describe('PDPServer', () => {
             headers: {
               get: (name: string) => {
                 if (name === 'Location') {
-                  return `/pdp/piece/upload/${mockUuid}`
+                  return `/api/pdp/piece/upload/${mockUuid}`
                 }
                 return null
               }
             },
             text: async () => 'Created'
           } as any
-        } else if (urlStr.includes(`/pdp/piece/upload/${String(mockUuid)}`) === true) {
+        } else if (urlStr.includes(`/api/pdp/piece/upload/${String(mockUuid)}`) === true) {
           // Upload data - return 204 No Content
           return {
             ok: true,
@@ -1018,7 +1018,7 @@ describe('PDPServer', () => {
       const originalFetch = global.fetch
       global.fetch = async (input: string | URL | Request, init?: RequestInit) => {
         const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
-        assert.include(url, '/ping')
+        assert.include(url, '/api/pdp/ping')
         assert.strictEqual(init?.method, 'GET')
         assert.deepEqual(init?.headers, {})
 
@@ -1134,7 +1134,7 @@ describe('PDPServer', () => {
 
       try {
         await pdpServer.ping()
-        assert.strictEqual(capturedUrl, `${serverUrl}/pdp/ping`)
+        assert.strictEqual(capturedUrl, `${serverUrl}/api/pdp/ping`)
       } finally {
         global.fetch = originalFetch
       }
