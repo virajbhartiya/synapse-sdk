@@ -1,3 +1,9 @@
+## [0.16.0](https://github.com/FilOzone/synapse-sdk/compare/v0.15.0...v0.16.0) (2025-07-03)
+
+### Features
+
+* **pdp:** implement ping validation for storage providers in selection process ([#119](https://github.com/FilOzone/synapse-sdk/issues/119)) ([12a5bf7](https://github.com/FilOzone/synapse-sdk/commit/12a5bf78101e9337cf590ece468197771a3d0030))
+
 ## [0.15.0](https://github.com/FilOzone/synapse-sdk/compare/v0.14.0...v0.15.0) (2025-06-25)
 
 ### Features
