@@ -1,3 +1,9 @@
+## [0.17.0](https://github.com/FilOzone/synapse-sdk/compare/v0.16.1...v0.17.0) (2025-07-04)
+
+### Features
+
+* add provider info and storage info APIs ([#124](https://github.com/FilOzone/synapse-sdk/issues/124)) ([af8afb1](https://github.com/FilOzone/synapse-sdk/commit/af8afb1ee8407e7516fc2e661bf28eabbf7efa90))
+
 ## [0.16.1](https://github.com/FilOzone/synapse-sdk/compare/v0.16.0...v0.16.1) (2025-07-04)
 
 ## [0.16.0](https://github.com/FilOzone/synapse-sdk/compare/v0.15.0...v0.16.0) (2025-07-03)
