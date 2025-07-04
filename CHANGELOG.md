@@ -1,3 +1,9 @@
+## [0.18.0](https://github.com/FilOzone/synapse-sdk/compare/v0.17.0...v0.18.0) (2025-07-04)
+
+### Features
+
+* add SDK methods to fetch proofset roots and metadata ([#111](https://github.com/FilOzone/synapse-sdk/issues/111)) ([a6ec128](https://github.com/FilOzone/synapse-sdk/commit/a6ec128b1dbf31eb68ff88d0cb00f91d0557e011))
+
 ## [0.17.0](https://github.com/FilOzone/synapse-sdk/compare/v0.16.1...v0.17.0) (2025-07-04)
 
 ### Features
