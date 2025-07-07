@@ -142,7 +142,7 @@ export class StorageService {
 
     // If we need to create a new proof set
     let finalProofSetId: number
-    if (resolution.proofSetId === -1 || options.newProofSet) {
+    if (resolution.proofSetId === -1 || options.newProofSet === true) {
       // Need to create new proof set
       finalProofSetId = await StorageService.createProofSet(
         synapse,
@@ -182,7 +182,7 @@ export class StorageService {
     callbacks?: StorageCreationCallbacks
   ): Promise<number> {
     timingCollector.start('createProofSet')
-    
+
     const signer = synapse.getSigner()
     const signerAddress = await signer.getAddress()
 
@@ -791,7 +791,7 @@ export class StorageService {
    */
   async upload (data: Uint8Array | ArrayBuffer, callbacks?: UploadCallbacks): Promise<UploadResult> {
     timingCollector.start('upload')
-    
+
     // Validation Phase: Check data size
     const dataBytes = data instanceof ArrayBuffer ? new Uint8Array(data) : data
     const sizeBytes = dataBytes.length
