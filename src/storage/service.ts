@@ -29,6 +29,7 @@ import { PDPAuthHelper } from '../pdp/auth.js'
 import { createError, epochToDate, calculateLastProofDate, timeUntilEpoch } from '../utils/index.js'
 import { SIZE_CONSTANTS, TIMING_CONSTANTS } from '../utils/constants.js'
 import { asCommP } from '../commp/index.js'
+import { timingCollector } from '../utils/timing.js'
 
 export class StorageService {
   private readonly _synapse: Synapse
@@ -153,7 +154,7 @@ export class StorageService {
 
     // If we need to create a new proof set
     let finalProofSetId: number
-    if (resolution.proofSetId === -1) {
+    if (resolution.proofSetId === -1 || options.newProofSet === true) {
       // Need to create new proof set
       finalProofSetId = await StorageService.createProofSet(
         synapse,
@@ -192,6 +193,8 @@ export class StorageService {
     withCDN: boolean,
     callbacks?: StorageCreationCallbacks
   ): Promise<number> {
+    timingCollector.start('createProofSet')
+
     const signer = synapse.getSigner()
     const signerAddress = await signer.getAddress()
 
@@ -218,12 +221,14 @@ export class StorageService {
     )
 
     // Create the proof set through the provider
+    timingCollector.start('pdpServer.createProofSet')
     const createResult = await pdpServer.createProofSet(
       nextDatasetId, // clientDataSetId
       provider.owner, // payee (storage provider)
       withCDN,
       pandoraAddress // recordKeeper (Pandora contract)
     )
+    timingCollector.end('pdpServer.createProofSet')
 
     // createProofSet returns CreateProofSetResponse with txHash and statusUrl
     const { txHash, statusUrl } = createResult
@@ -237,6 +242,7 @@ export class StorageService {
     const txPropagationTimeout = TIMING_CONSTANTS.TRANSACTION_PROPAGATION_TIMEOUT_MS
     const txPropagationPollInterval = TIMING_CONSTANTS.TRANSACTION_PROPAGATION_POLL_INTERVAL_MS
 
+    timingCollector.start('getTransaction')
     while (Date.now() - txRetryStartTime < txPropagationTimeout) {
       try {
         transaction = await ethersProvider.getTransaction(txHash)
@@ -251,6 +257,7 @@ export class StorageService {
       // Wait before retrying
       await new Promise(resolve => setTimeout(resolve, txPropagationPollInterval))
     }
+    timingCollector.end('getTransaction')
 
     // If transaction still not found after retries, throw error
     if (transaction === null) {
@@ -271,6 +278,7 @@ export class StorageService {
     // Wait for the proof set creation to be confirmed on-chain with progress callbacks
     let finalStatus: Awaited<ReturnType<typeof pandoraService.getComprehensiveProofSetStatus>>
 
+    timingCollector.start('waitForProofSetCreationWithStatus')
     try {
       finalStatus = await pandoraService.waitForProofSetCreationWithStatus(
         transaction,
@@ -309,12 +317,14 @@ export class StorageService {
         }
       )
     } catch (error) {
+      timingCollector.end('waitForProofSetCreationWithStatus')
       throw createError(
         'StorageService',
         'waitForProofSetCreation',
         error instanceof Error ? error.message : 'Proof set creation failed'
       )
     }
+    timingCollector.end('waitForProofSetCreationWithStatus')
 
     if (!finalStatus.summary.isComplete || finalStatus.summary.proofSetId == null) {
       throw createError(
@@ -337,6 +347,7 @@ export class StorageService {
       console.error('Error in onProofSetResolved callback:', error)
     }
 
+    timingCollector.end('createProofSet')
     return proofSetId
   }
 
@@ -791,6 +802,8 @@ export class StorageService {
    * Upload data to the storage provider
    */
   async upload (data: Uint8Array | ArrayBuffer, callbacks?: UploadCallbacks): Promise<UploadResult> {
+    timingCollector.start('upload')
+
     // Validation Phase: Check data size
     const dataBytes = data instanceof ArrayBuffer ? new Uint8Array(data) : data
     const sizeBytes = dataBytes.length
@@ -801,8 +814,11 @@ export class StorageService {
     // Upload Phase: Upload data to storage provider
     let uploadResult: { commP: CommP, size: number }
     try {
+      timingCollector.start('pdpServer.uploadPiece')
       uploadResult = await this._pdpServer.uploadPiece(dataBytes)
+      timingCollector.end('pdpServer.uploadPiece')
     } catch (error) {
+      timingCollector.end('pdpServer.uploadPiece')
       throw createError(
         'StorageService',
         'uploadPiece',
@@ -817,6 +833,7 @@ export class StorageService {
     const startTime = Date.now()
     let pieceReady = false
 
+    timingCollector.start('findPiece')
     while (Date.now() - startTime < maxWaitTime) {
       try {
         await this._pdpServer.findPiece(uploadResult.commP, uploadResult.size)
@@ -829,6 +846,7 @@ export class StorageService {
         }
       }
     }
+    timingCollector.end('findPiece')
 
     if (!pieceReady) {
       throw createError(
@@ -868,6 +886,7 @@ export class StorageService {
     })
 
     // Return upload result
+    timingCollector.end('upload')
     return {
       commp: uploadResult.commP,
       size: uploadResult.size,
@@ -891,20 +910,24 @@ export class StorageService {
 
     try {
       // Get add roots info to ensure we have the correct nextRootId
+      timingCollector.start('getAddRootsInfo')
       const addRootsInfo = await this._pandoraService.getAddRootsInfo(
         this._proofSetId
       )
+      timingCollector.end('getAddRootsInfo')
 
       // Create root data array from the batch
       const rootDataArray: RootData[] = batch.map((item) => item.rootData)
 
       // Add roots to the proof set
+      timingCollector.start('pdpServer.addRoots')
       const addRootsResult = await this._pdpServer.addRoots(
         this._proofSetId, // PDPVerifier proof set ID
         addRootsInfo.clientDataSetId, // Client's dataset ID
         addRootsInfo.nextRootId, // Must match chain state
         rootDataArray
       )
+      timingCollector.end('pdpServer.addRoots')
 
       // Handle transaction tracking if available (backward compatible)
       let confirmedRootIds: number[] = []
@@ -918,6 +941,7 @@ export class StorageService {
         const txPropagationTimeout = TIMING_CONSTANTS.TRANSACTION_PROPAGATION_TIMEOUT_MS
         const txPropagationPollInterval = TIMING_CONSTANTS.TRANSACTION_PROPAGATION_POLL_INTERVAL_MS
 
+        timingCollector.start('getTransaction.addRoots')
         while (Date.now() - txRetryStartTime < txPropagationTimeout) {
           try {
             transaction = await this._synapse.getProvider().getTransaction(addRootsResult.txHash)
@@ -927,6 +951,7 @@ export class StorageService {
           }
           await new Promise(resolve => setTimeout(resolve, txPropagationPollInterval))
         }
+        timingCollector.end('getTransaction.addRoots')
 
         if (transaction == null) {
           throw createError(
@@ -942,8 +967,11 @@ export class StorageService {
         // Step 2: Wait for transaction confirmation
         let receipt: ethers.TransactionReceipt | null
         try {
+          timingCollector.start('transaction.wait')
           receipt = await transaction.wait(TIMING_CONSTANTS.TRANSACTION_CONFIRMATIONS)
+          timingCollector.end('transaction.wait')
         } catch (error) {
+          timingCollector.end('transaction.wait')
           throw createError(
             'StorageService',
             'addRoots',
@@ -967,6 +995,7 @@ export class StorageService {
         let lastError: Error | null = null
         let statusVerified = false
 
+        timingCollector.start('getRootAdditionStatus')
         while (Date.now() - startTime < maxWaitTime) {
           try {
             const status = await this._pdpServer.getRootAdditionStatus(
@@ -1013,6 +1042,7 @@ export class StorageService {
             )
           }
         }
+        timingCollector.end('getRootAdditionStatus')
 
         if (!statusVerified) {
           const errorMessage = `Failed to verify root addition after ${maxWaitTime / 1000} seconds: ${
