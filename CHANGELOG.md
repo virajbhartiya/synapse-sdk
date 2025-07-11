@@ -1,3 +1,14 @@
+## [0.19.0](https://github.com/FilOzone/synapse-sdk/compare/v0.18.0...v0.19.0) (2025-07-11)
+
+### Features
+
+* implement SynapseStorage[#piece](https://github.com/FilOzone/synapse-sdk/issues/piece)Status(commp) ([#127](https://github.com/FilOzone/synapse-sdk/issues/127)) ([9ee7f5b](https://github.com/FilOzone/synapse-sdk/commit/9ee7f5b10d28629fb0238647318be88b4b135552))
+* **retriever:** add SubgraphRetriever ([#115](https://github.com/FilOzone/synapse-sdk/issues/115)) ([6352278](https://github.com/FilOzone/synapse-sdk/commit/6352278df83ee509d77c17266b070f2bcc5e58f5))
+
+### Trivial Changes
+
+* Update .github/workflows/add-issues-and-prs-to-fs-project-board.yml [skip ci] ([579ef07](https://github.com/FilOzone/synapse-sdk/commit/579ef070d795ee55521b7d5c81bf66016768a5e1))
+
 ## [0.18.0](https://github.com/FilOzone/synapse-sdk/compare/v0.17.0...v0.18.0) (2025-07-04)
 
 ### Features
