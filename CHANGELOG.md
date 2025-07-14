@@ -1,3 +1,9 @@
+## [0.19.1](https://github.com/FilOzone/synapse-sdk/compare/v0.19.0...v0.19.1) (2025-07-14)
+
+### Trivial Changes
+
+* add Claude Code GitHub Workflow [skip-ci] ([#128](https://github.com/FilOzone/synapse-sdk/issues/128)) ([3878254](https://github.com/FilOzone/synapse-sdk/commit/38782549ac216570da7bba49dfe66c79d6f65be6))
+
 ## [0.19.0](https://github.com/FilOzone/synapse-sdk/compare/v0.18.0...v0.19.0) (2025-07-11)
 
 ### Features
