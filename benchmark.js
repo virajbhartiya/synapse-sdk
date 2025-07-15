@@ -2,6 +2,7 @@
 
 import { Synapse } from './dist/synapse.js'
 import { timingCollector } from './dist/utils/timing.js'
+import { enableTimingCollection } from './dist/utils/timing.js'
 
 // Configuration
 const PRIVATE_KEY = process.env.PRIVATE_KEY
@@ -9,11 +10,14 @@ const RPC_URL = process.env.RPC_URL || 'https://api.calibration.node.glif.io/rpc
 const PROVIDER_ADDRESS = process.env.PROVIDER_ADDRESS
 const PIECE_SIZE = 100 * 1024 * 1024 // 100 MiB
 const NUM_RUNS = 4
+const PANDORA_ADDRESS = process.env.PANDORA_ADDRESS;
 
 if (!PRIVATE_KEY) {
   console.error('Please set PRIVATE_KEY environment variable')
   process.exit(1)
 }
+
+enableTimingCollection()
 
 async function generateRandomData(size) {
   const data = new Uint8Array(size)
@@ -31,10 +35,13 @@ async function runBenchmark() {
   console.log('')
 
   // Initialize Synapse
-  const synapse = new Synapse({
+  const synapse = await Synapse.create({
     privateKey: PRIVATE_KEY,
-    rpcURL: RPC_URL
+    rpcURL: RPC_URL,
+    pandoraAddress: PANDORA_ADDRESS
   })
+  console.log('Synapse instance:', synapse)
+  console.log('Synapse network:', synapse.getNetwork && synapse.getNetwork())
 
   try {
     for (let run = 1; run <= NUM_RUNS; run++) {

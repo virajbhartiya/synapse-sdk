@@ -1,3 +1,5 @@
+const TIMING_SYMBOL = Symbol.for('synapse.timing.enabled')
+
 export interface TimingData {
   operation: string
   startTime: number
@@ -14,8 +16,14 @@ export interface TimingResult {
 
 class TimingCollector {
   public timings: Map<string, TimingData[]> = new Map()
+  public enabled: boolean
 
-  start (operation: string, metadata?: Record<string, any>): void {
+  constructor(enabled = false) {
+    this.enabled = enabled
+  }
+
+  start(operation: string, metadata?: Record<string, any>): void {
+    if (!this.enabled) return
     const timing: TimingData = {
       operation,
       startTime: performance.now(),
@@ -30,7 +38,8 @@ class TimingCollector {
     }
   }
 
-  end (operation: string): TimingResult | null {
+  end(operation: string): TimingResult | null {
+    if (!this.enabled) return null
     const operationTimings = this.timings.get(operation)
     if ((operationTimings == null) || operationTimings.length === 0) {
       return null
@@ -48,7 +57,8 @@ class TimingCollector {
     }
   }
 
-  getResults (): Record<string, TimingResult[]> {
+  getResults(): Record<string, TimingResult[]> {
+    if (!this.enabled) return {}
     const results: Record<string, TimingResult[]> = {}
     for (const [operation, timings] of this.timings) {
       results[operation] = timings
@@ -62,11 +72,13 @@ class TimingCollector {
     return results
   }
 
-  clear (): void {
+  clear(): void {
+    if (!this.enabled) return
     this.timings.clear()
   }
 
-  printResults (): void {
+  printResults(): void {
+    if (!this.enabled) return
     const results = this.getResults()
     console.log('\n=== TIMING RESULTS ===')
     for (const [operation, timings] of Object.entries(results)) {
@@ -86,7 +98,22 @@ class TimingCollector {
   }
 }
 
-export const timingCollector = new TimingCollector()
+let timingCollector: TimingCollector
+
+if (typeof globalThis !== 'undefined' && (globalThis as any)[TIMING_SYMBOL]) {
+  timingCollector = new TimingCollector(true)
+} else {
+  timingCollector = new TimingCollector(false)
+}
+
+export function enableTimingCollection() {
+  if (typeof globalThis !== 'undefined') {
+    (globalThis as any)[TIMING_SYMBOL] = true
+    timingCollector.enabled = true
+  }
+}
+
+export { timingCollector }
 
 declare global {
   let timingCollector: TimingCollector
