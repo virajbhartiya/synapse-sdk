@@ -1,3 +1,9 @@
+## [0.19.2](https://github.com/FilOzone/synapse-sdk/compare/v0.19.1...v0.19.2) (2025-07-15)
+
+### Bug Fixes
+
+* **pdp:** handle Curio's "proofsetCreated" casing ([#130](https://github.com/FilOzone/synapse-sdk/issues/130)) ([594c4ae](https://github.com/FilOzone/synapse-sdk/commit/594c4aee071891ad622bcec2ee2d4bf49415584e))
+
 ## [0.19.1](https://github.com/FilOzone/synapse-sdk/compare/v0.19.0...v0.19.1) (2025-07-14)
 
 ### Trivial Changes
