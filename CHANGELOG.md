@@ -1,3 +1,9 @@
+## [0.19.3](https://github.com/FilOzone/synapse-sdk/compare/v0.19.2...v0.19.3) (2025-07-15)
+
+### Trivial Changes
+
+* **docs:** npm badge on readme ([#132](https://github.com/FilOzone/synapse-sdk/issues/132)) ([ab8aa4c](https://github.com/FilOzone/synapse-sdk/commit/ab8aa4c860c5ec3b294dbb1868be627e004a04b1))
+
 ## [0.19.2](https://github.com/FilOzone/synapse-sdk/compare/v0.19.1...v0.19.2) (2025-07-15)
 
 ### Bug Fixes
