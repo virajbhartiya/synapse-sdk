@@ -18,11 +18,11 @@ class TimingCollector {
   public timings: Map<string, TimingData[]> = new Map()
   public enabled: boolean
 
-  constructor(enabled = false) {
+  constructor (enabled = false) {
     this.enabled = enabled
   }
 
-  start(operation: string, metadata?: Record<string, any>): void {
+  start (operation: string, metadata?: Record<string, any>): void {
     if (!this.enabled) return
     const timing: TimingData = {
       operation,
@@ -38,7 +38,7 @@ class TimingCollector {
     }
   }
 
-  end(operation: string): TimingResult | null {
+  end (operation: string): TimingResult | null {
     if (!this.enabled) return null
     const operationTimings = this.timings.get(operation)
     if ((operationTimings == null) || operationTimings.length === 0) {
@@ -57,7 +57,7 @@ class TimingCollector {
     }
   }
 
-  getResults(): Record<string, TimingResult[]> {
+  getResults (): Record<string, TimingResult[]> {
     if (!this.enabled) return {}
     const results: Record<string, TimingResult[]> = {}
     for (const [operation, timings] of this.timings) {
@@ -72,12 +72,12 @@ class TimingCollector {
     return results
   }
 
-  clear(): void {
+  clear (): void {
     if (!this.enabled) return
     this.timings.clear()
   }
 
-  printResults(): void {
+  printResults (): void {
     if (!this.enabled) return
     const results = this.getResults()
     console.log('\n=== TIMING RESULTS ===')
@@ -100,15 +100,15 @@ class TimingCollector {
 
 let timingCollector: TimingCollector
 
-if (typeof globalThis !== 'undefined' && (globalThis as any)[TIMING_SYMBOL]) {
+if (typeof globalThis !== 'undefined' && Boolean((globalThis as Record<string, unknown>)[TIMING_SYMBOL as unknown as string])) {
   timingCollector = new TimingCollector(true)
 } else {
   timingCollector = new TimingCollector(false)
 }
 
-export function enableTimingCollection() {
+export function enableTimingCollection (): void {
   if (typeof globalThis !== 'undefined') {
-    (globalThis as any)[TIMING_SYMBOL] = true
+    (globalThis as Record<string, unknown>)[TIMING_SYMBOL as unknown as string] = true
     timingCollector.enabled = true
   }
 }
@@ -120,5 +120,5 @@ declare global {
 }
 
 if (typeof globalThis !== 'undefined') {
-  (globalThis as any).timingCollector = timingCollector
+  (globalThis as Record<string, unknown>).timingCollector = timingCollector
 }
