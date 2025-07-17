@@ -1,3 +1,9 @@
+## [0.19.4](https://github.com/FilOzone/synapse-sdk/compare/v0.19.3...v0.19.4) (2025-07-17)
+
+### Trivial Changes
+
+* update docs for add-issues-and-prs-to-fs-project-board.yml ([#133](https://github.com/FilOzone/synapse-sdk/issues/133)) ([20ea7f3](https://github.com/FilOzone/synapse-sdk/commit/20ea7f35bc5163f17d9ec2106958c75eabcf31d3))
+
 ## [0.19.3](https://github.com/FilOzone/synapse-sdk/compare/v0.19.2...v0.19.3) (2025-07-15)
 
 ### Trivial Changes
