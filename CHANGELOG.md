@@ -1,3 +1,9 @@
+## [0.20.0](https://github.com/FilOzone/synapse-sdk/compare/v0.19.4...v0.20.0) (2025-07-18)
+
+### Features
+
+* **doc:** dual license as Apache 2.0 & MIT ([#134](https://github.com/FilOzone/synapse-sdk/issues/134)) ([5170b19](https://github.com/FilOzone/synapse-sdk/commit/5170b19095159de52ce46f332c8ac2b0a90003b8))
+
 ## [0.19.4](https://github.com/FilOzone/synapse-sdk/compare/v0.19.3...v0.19.4) (2025-07-17)
 
 ### Trivial Changes
