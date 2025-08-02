@@ -122,9 +122,44 @@ describe('Synapse', () => {
       const mainnetProvider = createMockProvider(314)
       const synapse = await Synapse.create({
         provider: mainnetProvider,
-        pandoraAddress: '0x1234567890123456789012345678901234567890' // Custom address for mainnet
+        pandoraAddress: '0x1234567890123456789012345678901234567890', // Custom address for mainnet
+        pdpVerifierAddress: '0x9876543210987654321098765432109876543210' // Custom PDPVerifier address for mainnet
       })
       assert.exists(synapse)
+    })
+
+    it('should accept custom pdpVerifierAddress', async () => {
+      const calibrationProvider = createMockProvider(314159)
+      const customPDPVerifierAddress = '0xabcdef1234567890123456789012345678901234'
+      const synapse = await Synapse.create({
+        provider: calibrationProvider,
+        pdpVerifierAddress: customPDPVerifierAddress
+      })
+      assert.exists(synapse)
+      assert.equal(synapse.getPDPVerifierAddress(), customPDPVerifierAddress)
+    })
+
+    it('should use default pdpVerifierAddress when not provided', async () => {
+      const calibrationProvider = createMockProvider(314159)
+      const synapse = await Synapse.create({
+        provider: calibrationProvider
+      })
+      assert.exists(synapse)
+      assert.equal(synapse.getPDPVerifierAddress(), '0x5A23b7df87f59A291C26A2A1d684AD03Ce9B68DC') // Calibration default
+    })
+
+    it('should accept both custom pandoraAddress and pdpVerifierAddress', async () => {
+      const mainnetProvider = createMockProvider(314)
+      const customPandoraAddress = '0x1111111111111111111111111111111111111111'
+      const customPDPVerifierAddress = '0x2222222222222222222222222222222222222222'
+      const synapse = await Synapse.create({
+        provider: mainnetProvider,
+        pandoraAddress: customPandoraAddress,
+        pdpVerifierAddress: customPDPVerifierAddress
+      })
+      assert.exists(synapse)
+      assert.equal(synapse.getPandoraAddress(), customPandoraAddress)
+      assert.equal(synapse.getPDPVerifierAddress(), customPDPVerifierAddress)
     })
   })
 

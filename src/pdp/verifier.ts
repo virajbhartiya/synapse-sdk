@@ -10,7 +10,7 @@
  * import { ethers } from 'ethers'
  *
  * const provider = new ethers.JsonRpcProvider(rpcUrl)
- * const pdpVerifier = new PDPVerifier(provider)
+ * const pdpVerifier = new PDPVerifier(provider, contractAddress)
  *
  * // Check if a proof set is live
  * const isLive = await pdpVerifier.proofSetLive(proofSetId)
@@ -19,42 +19,21 @@
  */
 
 import { ethers } from 'ethers'
-import { CONTRACT_ABIS, CONTRACT_ADDRESSES } from '../utils/index.js'
+import { CONTRACT_ABIS } from '../utils/index.js'
 
 export class PDPVerifier {
   private readonly _provider: ethers.Provider
-  private _contract: ethers.Contract | null = null
-  private _chainId: number | null = null
+  private readonly _contractAddress: string
+  private readonly _contract: ethers.Contract
 
-  constructor (provider: ethers.Provider) {
+  constructor (provider: ethers.Provider, contractAddress: string) {
     this._provider = provider
-  }
-
-  /**
-   * Get the PDPVerifier contract instance
-   */
-  private async _getContract (): Promise<ethers.Contract> {
-    if (this._contract == null) {
-      // Detect network to get the correct PDPVerifier address
-      const network = await this._provider.getNetwork()
-      this._chainId = Number(network.chainId)
-
-      let pdpVerifierAddress: string
-      if (this._chainId === 314) {
-        pdpVerifierAddress = CONTRACT_ADDRESSES.PDP_VERIFIER.mainnet
-      } else if (this._chainId === 314159) {
-        pdpVerifierAddress = CONTRACT_ADDRESSES.PDP_VERIFIER.calibration
-      } else {
-        throw new Error(`Unsupported network: ${this._chainId}. Only Filecoin mainnet (314) and calibration (314159) are supported.`)
-      }
-
-      this._contract = new ethers.Contract(
-        pdpVerifierAddress,
-        CONTRACT_ABIS.PDP_VERIFIER,
-        this._provider
-      )
-    }
-    return this._contract
+    this._contractAddress = contractAddress
+    this._contract = new ethers.Contract(
+      this._contractAddress,
+      CONTRACT_ABIS.PDP_VERIFIER,
+      this._provider
+    )
   }
 
   /**
@@ -63,8 +42,7 @@ export class PDPVerifier {
    * @returns Whether the proof set exists and is live
    */
   async proofSetLive (proofSetId: number): Promise<boolean> {
-    const contract = await this._getContract()
-    return await contract.proofSetLive(proofSetId)
+    return await this._contract.proofSetLive(proofSetId)
   }
 
   /**
@@ -73,8 +51,7 @@ export class PDPVerifier {
    * @returns The next root ID (which equals the current root count)
    */
   async getNextRootId (proofSetId: number): Promise<number> {
-    const contract = await this._getContract()
-    const nextRootId = await contract.getNextRootId(proofSetId)
+    const nextRootId = await this._contract.getNextRootId(proofSetId)
     return Number(nextRootId)
   }
 
@@ -84,8 +61,7 @@ export class PDPVerifier {
    * @returns The address of the listener contract
    */
   async getProofSetListener (proofSetId: number): Promise<string> {
-    const contract = await this._getContract()
-    return await contract.getProofSetListener(proofSetId)
+    return await this._contract.getProofSetListener(proofSetId)
   }
 
   /**
@@ -94,8 +70,7 @@ export class PDPVerifier {
    * @returns Object with current owner and proposed owner
    */
   async getProofSetOwner (proofSetId: number): Promise<{ owner: string, proposedOwner: string }> {
-    const contract = await this._getContract()
-    const [owner, proposedOwner] = await contract.getProofSetOwner(proofSetId)
+    const [owner, proposedOwner] = await this._contract.getProofSetOwner(proofSetId)
     return { owner, proposedOwner }
   }
 
@@ -105,8 +80,7 @@ export class PDPVerifier {
    * @returns The number of leaves in the proof set
    */
   async getProofSetLeafCount (proofSetId: number): Promise<number> {
-    const contract = await this._getContract()
-    const leafCount = await contract.getProofSetLeafCount(proofSetId)
+    const leafCount = await this._contract.getProofSetLeafCount(proofSetId)
     return Number(leafCount)
   }
 
@@ -115,14 +89,12 @@ export class PDPVerifier {
    * @param receipt - Transaction receipt
    * @returns Proof set ID if found, null otherwise
    */
-  async extractProofSetIdFromReceipt (receipt: ethers.TransactionReceipt): Promise<number | null> {
+  extractProofSetIdFromReceipt (receipt: ethers.TransactionReceipt): number | null {
     try {
-      const contract = await this._getContract()
-
       // Parse logs looking for ProofSetCreated event
       for (const log of receipt.logs) {
         try {
-          const parsedLog = contract.interface.parseLog({
+          const parsedLog = this._contract.interface.parseLog({
             topics: log.topics,
             data: log.data
           })
@@ -145,8 +117,7 @@ export class PDPVerifier {
   /**
    * Get the PDPVerifier contract address for the current network
    */
-  async getContractAddress (): Promise<string> {
-    const contract = await this._getContract()
-    return contract.target as string
+  getContractAddress (): string {
+    return this._contract.target as string
   }
 }

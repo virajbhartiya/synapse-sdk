@@ -521,7 +521,8 @@ Interact with the Pandora contract for proof set management, storage provider op
 ```javascript
 import { PandoraService } from '@filoz/synapse-sdk/pandora'
 
-const pandoraService = new PandoraService(provider, pandoraAddress)
+// Deployed contract addresses are available in CONTRACT_ADDRESSES
+const pandoraService = new PandoraService(provider, pandoraAddress, pdpVerifierAddress)
 
 // Storage cost calculations
 const costs = await pandoraService.calculateStorageCost(sizeInBytes)
@@ -640,7 +641,8 @@ Low-level interface to the PDPVerifier contract for protocol operations.
 ```javascript
 import { PDPVerifier } from '@filoz/synapse-sdk/pdp'
 
-const pdpVerifier = new PDPVerifier(provider)
+// Deployed contract addresses are available in CONTRACT_ADDRESSES
+const pdpVerifier = new PDPVerifier(provider, pdpVerifierAddress)
 
 // Check if proof set is live
 const isLive = await pdpVerifier.proofSetLive(proofSetId)
@@ -662,6 +664,7 @@ Consolidated interface for all PDP server (Curio) HTTP operations including proo
 import { PDPServer, PDPAuthHelper } from '@filoz/synapse-sdk/pdp'
 
 // Create server instance with auth helper
+// Deployed contract addresses are available in CONTRACT_ADDRESSES
 const authHelper = new PDPAuthHelper(pandoraAddress, signer, chainId)
 const pdpServer = new PDPServer(authHelper, 'https://pdp.provider.com', 'https://pdp.provider.com')
 
@@ -715,6 +718,7 @@ Sign EIP-712 typed data for PDP operations. Compatible with MetaMask and other b
 import { PDPAuthHelper } from '@filoz/synapse-sdk/pdp'
 
 // Create auth helper directly
+// Deployed contract addresses are available in CONTRACT_ADDRESSES
 const authHelper = new PDPAuthHelper(pandoraAddress, signer, chainId)
 
 // Sign operations
