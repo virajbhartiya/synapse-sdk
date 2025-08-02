@@ -1,3 +1,13 @@
+## [1.0.0](https://github.com/FilOzone/synapse-sdk/compare/v0.20.1...v1.0.0) (2025-08-02)
+
+### ⚠ BREAKING CHANGES
+
+* add pdpVerifierAddress option to SynapseOptions (#138)
+
+### Features
+
+* add pdpVerifierAddress option to SynapseOptions ([#138](https://github.com/FilOzone/synapse-sdk/issues/138)) ([d35b40d](https://github.com/FilOzone/synapse-sdk/commit/d35b40d8d418432fb3dfee3fb9ac8bd2bc16ecea))
+
 ## [0.20.1](https://github.com/FilOzone/synapse-sdk/compare/v0.20.0...v0.20.1) (2025-08-02)
 
 ### Trivial Changes
