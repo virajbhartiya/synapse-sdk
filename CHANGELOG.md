@@ -1,3 +1,9 @@
+## [0.20.1](https://github.com/FilOzone/synapse-sdk/compare/v0.20.0...v0.20.1) (2025-08-02)
+
+### Trivial Changes
+
+* **ci:** grant Claude more permissions ([#139](https://github.com/FilOzone/synapse-sdk/issues/139)) ([3e4d23c](https://github.com/FilOzone/synapse-sdk/commit/3e4d23c18f29106efa5553e0fecae4da6e6d3bb0))
+
 ## [0.20.0](https://github.com/FilOzone/synapse-sdk/compare/v0.19.4...v0.20.0) (2025-07-18)
 
 ### Features
