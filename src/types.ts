@@ -296,8 +296,8 @@ export interface StorageServiceOptions {
   proofSetId?: number
   /** Whether to enable CDN services */
   withCDN?: boolean
-  /** Force creation of a new proof set (for benchmarking) */
-  newProofSet?: boolean
+  /** Force creation of a new proof set, even if a candidate exists */
+  forceCreateProofSet?: boolean
   /** Callbacks for creation process */
   callbacks?: StorageCreationCallbacks
   /** Maximum number of uploads to process in a single batch (default: 32, minimum: 1) */

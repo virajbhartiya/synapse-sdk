@@ -34,7 +34,6 @@ import { constructPieceUrl, constructFindPieceUrl } from '../utils/piece.js'
 import { MULTIHASH_CODES } from '../utils/index.js'
 import { toHex } from 'multiformats/bytes'
 import { validateProofSetCreationStatusResponse, validateRootAdditionStatusResponse, validateFindPieceResponse, asProofSetData } from './validation.js'
-import { timingCollector } from '../utils/timing.js'
 
 /**
  * Response from creating a proof set
@@ -421,9 +420,10 @@ export class PDPServer {
     const uint8Data = data instanceof ArrayBuffer ? new Uint8Array(data) : data
 
     // Calculate CommP
-    timingCollector.start('calculateCommP')
+    performance.mark('synapse:calculateCommP-start')
     const commP = await calculateCommP(uint8Data)
-    timingCollector.end('calculateCommP')
+    performance.mark('synapse:calculateCommP-end')
+    performance.measure('synapse:calculateCommP', 'synapse:calculateCommP-start', 'synapse:calculateCommP-end')
     const size = uint8Data.length
 
     // Extract the raw hash from the CommP CID
@@ -443,7 +443,7 @@ export class PDPServer {
     }
 
     // Create upload session or check if piece exists
-    timingCollector.start('POST.pdp.piece')
+    performance.mark('synapse:POST.pdp.piece-start')
     const createResponse = await fetch(`${this._apiEndpoint}/pdp/piece`, {
       method: 'POST',
       headers: {
@@ -451,7 +451,8 @@ export class PDPServer {
       },
       body: JSON.stringify(requestBody)
     })
-    timingCollector.end('POST.pdp.piece')
+    performance.mark('synapse:POST.pdp.piece-end')
+    performance.measure('synapse:POST.pdp.piece', 'synapse:POST.pdp.piece-start', 'synapse:POST.pdp.piece-end')
 
     if (createResponse.status === 200) {
       // Piece already exists on server
@@ -482,7 +483,7 @@ export class PDPServer {
     const uploadUuid = locationMatch[1] // Extract just the UUID
 
     // Upload the data
-    timingCollector.start('PUT.pdp.piece.upload')
+    performance.mark('synapse:PUT.pdp.piece.upload-start')
     const uploadResponse = await fetch(`${this._apiEndpoint}/pdp/piece/upload/${uploadUuid}`, {
       method: 'PUT',
       headers: {
@@ -492,7 +493,8 @@ export class PDPServer {
       },
       body: uint8Data
     })
-    timingCollector.end('PUT.pdp.piece.upload')
+    performance.mark('synapse:PUT.pdp.piece.upload-end')
+    performance.measure('synapse:PUT.pdp.piece.upload', 'synapse:PUT.pdp.piece.upload-start', 'synapse:PUT.pdp.piece.upload-end')
 
     if (uploadResponse.status !== 204) {
       const errorText = await uploadResponse.text()
