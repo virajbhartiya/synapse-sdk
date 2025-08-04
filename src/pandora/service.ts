@@ -32,7 +32,6 @@ import { PDPVerifier } from '../pdp/verifier.js'
 import type { PDPServer, ProofSetCreationStatusResponse } from '../pdp/server.js'
 import { PaymentsService } from '../payments/service.js'
 import { SIZE_CONSTANTS, TIME_CONSTANTS, TIMING_CONSTANTS } from '../utils/constants.js'
-import { timingCollector } from '../utils/timing.js'
 
 /**
  * Helper information for adding roots to a proof set
@@ -407,18 +406,21 @@ export class PandoraService {
     // Get server status
     let serverStatus: ProofSetCreationStatusResponse | null = null
     try {
-      timingCollector.start('pdpServer.getProofSetCreationStatus')
+      performance.mark('synapse:pdpServer.getProofSetCreationStatus-start')
       serverStatus = await pdpServer.getProofSetCreationStatus(txHash)
-      timingCollector.end('pdpServer.getProofSetCreationStatus')
+      performance.mark('synapse:pdpServer.getProofSetCreationStatus-end')
+      performance.measure('synapse:pdpServer.getProofSetCreationStatus', 'synapse:pdpServer.getProofSetCreationStatus-start', 'synapse:pdpServer.getProofSetCreationStatus-end')
     } catch (error) {
-      timingCollector.end('pdpServer.getProofSetCreationStatus')
+      performance.mark('synapse:pdpServer.getProofSetCreationStatus-end')
+      performance.measure('synapse:pdpServer.getProofSetCreationStatus', 'synapse:pdpServer.getProofSetCreationStatus-start', 'synapse:pdpServer.getProofSetCreationStatus-end')
       // Server might not have the status yet
     }
 
     // Get chain status (pass through the transaction object if we have it)
-    timingCollector.start('verifyProofSetCreation')
+    performance.mark('synapse:verifyProofSetCreation-start')
     const chainStatus = await this.verifyProofSetCreation(txHashOrTransaction)
-    timingCollector.end('verifyProofSetCreation')
+    performance.mark('synapse:verifyProofSetCreation-end')
+    performance.measure('synapse:verifyProofSetCreation', 'synapse:verifyProofSetCreation-start', 'synapse:verifyProofSetCreation-end')
 
     // Combine into summary
     const summary = {
