@@ -1,3 +1,10 @@
+## [0.22.0](https://github.com/FilOzone/synapse-sdk/compare/v0.21.0...v0.22.0) (2025-08-04)
+
+### Features
+
+* add batching for parallel uploads ([48b46b0](https://github.com/FilOzone/synapse-sdk/commit/48b46b0f1cdc240fa9d3102e5726916a2c40ebde))
+* upload batch size, add simple debounce for uploads ([c54f36b](https://github.com/FilOzone/synapse-sdk/commit/c54f36b8f429e5e815c56c2c6ba75604fb1a3226))
+
 ## [0.21.0](https://github.com/FilOzone/synapse-sdk/compare/v0.20.1...v0.21.0) (2025-08-02)
 
 ### Features
