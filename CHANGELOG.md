@@ -1,3 +1,13 @@
+## [0.23.0](https://github.com/FilOzone/synapse-sdk/compare/v0.22.0...v0.23.0) (2025-08-04)
+
+### Features
+
+* use Performance API, update docs with additional timing input ([b4fe5f0](https://github.com/FilOzone/synapse-sdk/commit/b4fe5f035cbd962e4c8982418a3e02855cd6181d))
+
+### Trivial Changes
+
+* add comprehensive performance and timing analysis documentation ([d9eb5f1](https://github.com/FilOzone/synapse-sdk/commit/d9eb5f1bf4fdff44bb8c032bb5e0e6ab3954bb20)), closes [#125](https://github.com/FilOzone/synapse-sdk/issues/125)
+
 ## [0.22.0](https://github.com/FilOzone/synapse-sdk/compare/v0.21.0...v0.22.0) (2025-08-04)
 
 ### Features
