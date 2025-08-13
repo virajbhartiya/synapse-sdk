@@ -1,3 +1,9 @@
+## [0.23.1](https://github.com/FilOzone/synapse-sdk/compare/v0.23.0...v0.23.1) (2025-08-13)
+
+### Trivial Changes
+
+* **ci:** delete Claude Code PR review workflow ([#152](https://github.com/FilOzone/synapse-sdk/issues/152)) ([ec26b4b](https://github.com/FilOzone/synapse-sdk/commit/ec26b4b0242c74955c987fbfa64fa6da03c97bc7))
+
 ## [0.23.0](https://github.com/FilOzone/synapse-sdk/compare/v0.22.0...v0.23.0) (2025-08-04)
 
 ### Features
