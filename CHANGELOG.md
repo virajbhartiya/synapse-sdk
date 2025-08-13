@@ -1,3 +1,9 @@
+## [0.23.2](https://github.com/FilOzone/synapse-sdk/compare/v0.23.1...v0.23.2) (2025-08-13)
+
+### Trivial Changes
+
+* **deps:** bump actions/checkout from 4 to 5 ([#150](https://github.com/FilOzone/synapse-sdk/issues/150)) ([efc8018](https://github.com/FilOzone/synapse-sdk/commit/efc8018e801a4cd75da723d96f0c3c6ba106cda3))
+
 ## [0.23.1](https://github.com/FilOzone/synapse-sdk/compare/v0.23.0...v0.23.1) (2025-08-13)
 
 ### Trivial Changes
