@@ -1,3 +1,9 @@
+## [0.24.3](https://github.com/FilOzone/synapse-sdk/compare/v0.24.2...v0.24.3) (2025-09-08)
+
+### Trivial Changes
+
+* contract address constants ([#192](https://github.com/FilOzone/synapse-sdk/issues/192)) ([0456047](https://github.com/FilOzone/synapse-sdk/commit/0456047ab37d7e0df307330ae30c68ea27eb417f))
+
 ## [0.24.2](https://github.com/FilOzone/synapse-sdk/compare/v0.24.1...v0.24.2) (2025-09-06)
 
 ### Bug Fixes
