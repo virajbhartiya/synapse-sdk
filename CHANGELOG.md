@@ -1,3 +1,10 @@
+## [0.24.5](https://github.com/FilOzone/synapse-sdk/compare/v0.24.4...v0.24.5) (2025-09-09)
+
+### Trivial Changes
+
+* .gitignore Vim ([#205](https://github.com/FilOzone/synapse-sdk/issues/205)) ([60522f6](https://github.com/FilOzone/synapse-sdk/commit/60522f6715fb9ff917fd9c04d3ad015776c5c083))
+* **deps-dev:** bump @biomejs/biome from 2.2.2 to 2.2.3 ([#197](https://github.com/FilOzone/synapse-sdk/issues/197)) ([4aa6cf8](https://github.com/FilOzone/synapse-sdk/commit/4aa6cf87983610970fa11f7dbe11590cafcea587))
+
 ## [0.24.4](https://github.com/FilOzone/synapse-sdk/compare/v0.24.3...v0.24.4) (2025-09-09)
 
 ### Trivial Changes
