@@ -1,6 +1,6 @@
 {
   "name": "@filoz/synapse-sdk",
-  "version": "0.24.3",
+  "version": "0.24.4",
   "description": "A JavaScript interface to Filecoin Synapse",
   "type": "module",
   "main": "dist/index.js",

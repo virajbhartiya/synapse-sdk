@@ -1,3 +1,9 @@
+## [0.24.4](https://github.com/FilOzone/synapse-sdk/compare/v0.24.3...v0.24.4) (2025-09-09)
+
+### Trivial Changes
+
+* update testing setup and dependencies ([#171](https://github.com/FilOzone/synapse-sdk/issues/171)) ([eb3e590](https://github.com/FilOzone/synapse-sdk/commit/eb3e590e5a83b612afa285eac4fabcd4dbf8a059))
+
 ## [0.24.3](https://github.com/FilOzone/synapse-sdk/compare/v0.24.2...v0.24.3) (2025-09-08)
 
 ### Trivial Changes
