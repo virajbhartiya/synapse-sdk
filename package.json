@@ -50,8 +50,8 @@
     "test:ci": "npm run test",
     "test": "npm run lint && npm run test:node && npm run test:browser",
     "test:node": "playwright-test 'src/test/**/!(*.browser).test.{js,ts}' --mode node",
-    "test:browser": "playwright-test 'src/test/**/!(*.node).test.{js,ts}'",
-    "test:watch": "npm run test:node --watch",
+    "test:browser": "playwright-test 'src/test/**/!(*.node).test.{js,ts}' --assets ./src/test/mocks",
+    "test:watch": "npm run test:node -- --watch",
     "clean": "rm -rf dist",
     "prepublishOnly": "npm run clean && npm run build && npm run build:browser"
   },
@@ -90,10 +90,15 @@
     "@types/mocha": "^10.0.10",
     "@types/node": "^24.0.0",
     "@wagmi/cli": "^2.5.1",
+    "abitype": "^1.1.0",
     "chai": "^6.0.1",
     "conventional-changelog-conventionalcommits": "^9.0.0",
+    "iso-web": "^1.3.0",
     "mocha": "^11.5.0",
+    "msw": "^2.10.5",
+    "p-defer": "^4.0.1",
     "playwright-test": "^14.1.12",
+    "type-fest": "^4.41.0",
     "typescript": "5.9.2",
     "webpack": "^5.99.9",
     "webpack-cli": "^6.0.1"
@@ -188,6 +193,11 @@
           ]
         }
       ]
+    ]
+  },
+  "msw": {
+    "workerDirectory": [
+      "src/test/mocks"
     ]
   }
 }
