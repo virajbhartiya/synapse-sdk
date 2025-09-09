@@ -1,3 +1,5 @@
+## [0.24.6](https://github.com/FilOzone/synapse-sdk/compare/v0.24.5...v0.24.6) (2025-09-09)
+
 ## [0.24.5](https://github.com/FilOzone/synapse-sdk/compare/v0.24.4...v0.24.5) (2025-09-09)
 
 ### Trivial Changes
