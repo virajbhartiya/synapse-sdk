@@ -1,3 +1,9 @@
+## [0.24.9](https://github.com/FilOzone/synapse-sdk/compare/v0.24.8...v0.24.9) (2025-09-10)
+
+### Trivial Changes
+
+* **docs:** add GitHub Pages deployment workflow and enable GitHub Pages in Astro config ([#210](https://github.com/FilOzone/synapse-sdk/issues/210)) ([4158abf](https://github.com/FilOzone/synapse-sdk/commit/4158abfa2aca84523c40b810acaccd0eadb9de6f))
+
 ## [0.24.8](https://github.com/FilOzone/synapse-sdk/compare/v0.24.7...v0.24.8) (2025-09-10)
 
 ### Trivial Changes
