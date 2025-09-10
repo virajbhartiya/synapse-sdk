@@ -4,11 +4,12 @@ import { defineConfig } from 'astro/config'
 import ecTwoSlash from 'expressive-code-twoslash'
 import starlightLlmsTxt from 'starlight-llms-txt'
 
-const site = 'https://FilOzone.github.io/synapse-sdk/'
+const site = 'https://FilOzone.github.io'
 
 // https://astro.build/config
 export default defineConfig({
   site,
+  base: '/synapse-sdk',
   integrations: [
     starlight({
       title: 'Synapse',
