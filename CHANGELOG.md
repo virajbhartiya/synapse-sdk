@@ -1,3 +1,9 @@
+## [0.24.7](https://github.com/FilOzone/synapse-sdk/compare/v0.24.6...v0.24.7) (2025-09-10)
+
+### Trivial Changes
+
+* fix service-provider-tool ([#196](https://github.com/FilOzone/synapse-sdk/issues/196)) ([07374a6](https://github.com/FilOzone/synapse-sdk/commit/07374a632ac89e71ec8c6577c29d106dec43ed0d))
+
 ## [0.24.6](https://github.com/FilOzone/synapse-sdk/compare/v0.24.5...v0.24.6) (2025-09-09)
 
 ## [0.24.5](https://github.com/FilOzone/synapse-sdk/compare/v0.24.4...v0.24.5) (2025-09-09)
