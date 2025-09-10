@@ -1,3 +1,9 @@
+## [0.24.8](https://github.com/FilOzone/synapse-sdk/compare/v0.24.7...v0.24.8) (2025-09-10)
+
+### Trivial Changes
+
+* **docs:** initialize documentation site with Astro and Starlight ([#180](https://github.com/FilOzone/synapse-sdk/issues/180)) ([770efcb](https://github.com/FilOzone/synapse-sdk/commit/770efcbc66205577032be9e2098d151bdd2f3984))
+
 ## [0.24.7](https://github.com/FilOzone/synapse-sdk/compare/v0.24.6...v0.24.7) (2025-09-10)
 
 ### Trivial Changes
