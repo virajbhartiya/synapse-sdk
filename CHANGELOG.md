@@ -1,3 +1,17 @@
+## [0.24.10](https://github.com/FilOzone/synapse-sdk/compare/v0.24.9...v0.24.10) (2025-09-11)
+
+### Bug Fixes
+
+* select data set using providerId, not payee ([#211](https://github.com/FilOzone/synapse-sdk/issues/211)) ([6382e81](https://github.com/FilOzone/synapse-sdk/commit/6382e81330c787d328d9234f2a749643aa6ad3d6))
+
+### Trivial Changes
+
+* **no-release:** fix docs ([70d2c43](https://github.com/FilOzone/synapse-sdk/commit/70d2c43b24e9bed6c610a365353bae7010af8d24))
+* **no-release:** fix docs base path ([11ed22d](https://github.com/FilOzone/synapse-sdk/commit/11ed22dd76a147160cffae7983d60ad215d0a683))
+* **no-release:** fix docs index urls for github pages ([d31669b](https://github.com/FilOzone/synapse-sdk/commit/d31669bc824d3dba3886ae8b8bd6ace6afa650a2))
+* **no-release:** github urls again ([1c1aee5](https://github.com/FilOzone/synapse-sdk/commit/1c1aee566d3e409fcf711a37359651286f5c8782))
+* **no-release:** make docs run only on master ([04a6f2b](https://github.com/FilOzone/synapse-sdk/commit/04a6f2b5ba54491286107c7773cc82a60fdc96e6))
+
 ## [0.24.9](https://github.com/FilOzone/synapse-sdk/compare/v0.24.8...v0.24.9) (2025-09-10)
 
 ### Trivial Changes
