@@ -1,3 +1,10 @@
+## [0.24.11](https://github.com/FilOzone/synapse-sdk/compare/v0.24.10...v0.24.11) (2025-09-11)
+
+### Trivial Changes
+
+* **deps-dev:** bump @biomejs/biome from 2.2.3 to 2.2.4 ([#213](https://github.com/FilOzone/synapse-sdk/issues/213)) ([d79ba37](https://github.com/FilOzone/synapse-sdk/commit/d79ba37de99a5f0150e8065bf9d8c5de4c1016bd))
+* **deps:** bump actions/setup-node from 4 to 5 ([#212](https://github.com/FilOzone/synapse-sdk/issues/212)) ([32ec07a](https://github.com/FilOzone/synapse-sdk/commit/32ec07a1df8a81fc6c43fba00e96c18ecea776ed))
+
 ## [0.24.10](https://github.com/FilOzone/synapse-sdk/compare/v0.24.9...v0.24.10) (2025-09-11)
 
 ### Bug Fixes
