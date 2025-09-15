@@ -1,3 +1,9 @@
+## [0.25.1](https://github.com/FilOzone/synapse-sdk/compare/v0.25.0...v0.25.1) (2025-09-15)
+
+### Bug Fixes
+
+* mdx formatting ([#218](https://github.com/FilOzone/synapse-sdk/issues/218)) ([f93edec](https://github.com/FilOzone/synapse-sdk/commit/f93edec6af2caf8594635a07cdf21cf018b1d967))
+
 ## [0.25.0](https://github.com/FilOzone/synapse-sdk/compare/v0.24.11...v0.25.0) (2025-09-15)
 
 ### Features
