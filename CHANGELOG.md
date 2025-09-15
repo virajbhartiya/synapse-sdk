@@ -1,3 +1,14 @@
+## [0.25.0](https://github.com/FilOzone/synapse-sdk/compare/v0.24.11...v0.25.0) (2025-09-15)
+
+### Features
+
+* payment rail settlement ([#136](https://github.com/FilOzone/synapse-sdk/issues/136)) ([9a5503e](https://github.com/FilOzone/synapse-sdk/commit/9a5503ec0fbedd388e7113ab7f78c7f8563d0ff8))
+
+### Trivial Changes
+
+* **deps-dev:** bump type-fest from 4.41.0 to 5.0.0 ([#217](https://github.com/FilOzone/synapse-sdk/issues/217)) ([d3a3608](https://github.com/FilOzone/synapse-sdk/commit/d3a360873dea9587fdc4643fd8f8a74b2f337891))
+* **no-release:** disable eslint and prettier in VSCode settings ([#214](https://github.com/FilOzone/synapse-sdk/issues/214)) ([0631dbf](https://github.com/FilOzone/synapse-sdk/commit/0631dbfc156b87aaf66adf184ed6b89f91feb1fd))
+
 ## [0.24.11](https://github.com/FilOzone/synapse-sdk/compare/v0.24.10...v0.24.11) (2025-09-11)
 
 ### Trivial Changes
