@@ -972,6 +972,32 @@ describe('WarmStorageService', () => {
       ;(warmStorageService as any)._getWarmStorageContract = originalGetWarmStorageContract
     })
 
+    it('should terminate dataset (mock tx)', async () => {
+      const warmStorageService = await createWarmStorageService()
+      const mockSigner = {
+        getAddress: async () => '0x1234567890123456789012345678901234567890',
+      } as any
+
+      // Mock the contract connection
+      const originalGetWarmStorageContract = (warmStorageService as any)._getWarmStorageContract
+      ;(warmStorageService as any)._getWarmStorageContract = () => ({
+        connect: () => ({
+          terminateService: async (id: number) => {
+            assert.equal(id, 4)
+            return {
+              hash: '0xmocktxhash',
+              wait: async () => ({ status: 1 }),
+            }
+          },
+        }),
+      })
+
+      const tx = await warmStorageService.terminateDataSet(mockSigner, 4)
+      assert.equal(tx.hash, '0xmocktxhash')
+
+      ;(warmStorageService as any)._getWarmStorageContract = originalGetWarmStorageContract
+    })
+
     it('should remove approved provider with correct index', async () => {
       const warmStorageService = await createWarmStorageService()
       const mockSigner = {

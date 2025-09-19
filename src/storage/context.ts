@@ -1412,4 +1412,13 @@ export class StorageContext {
       isProofOverdue,
     }
   }
+
+  /**
+   * Terminates the data set by sending on-chain message.
+   * This will also result in the removal of all pieces in the data set.
+   * @returns Transaction response
+   */
+  async terminate(): Promise<ethers.TransactionResponse> {
+    return this._synapse.storage.terminateDataSet(this._dataSetId)
+  }
 }
