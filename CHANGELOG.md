@@ -1,3 +1,9 @@
+## [0.28.0](https://github.com/FilOzone/synapse-sdk/compare/v0.27.0...v0.28.0) (2025-09-19)
+
+### Features
+
+* add terminateDataSet functionality ([#230](https://github.com/FilOzone/synapse-sdk/issues/230)) ([ffaacac](https://github.com/FilOzone/synapse-sdk/commit/ffaacac507b4882abfc33d3de72fe9fa98843cd2))
+
 ## [0.27.0](https://github.com/FilOzone/synapse-sdk/compare/v0.26.0...v0.27.0) (2025-09-19)
 
 ### Features
