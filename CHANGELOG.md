@@ -1,3 +1,9 @@
+## [0.26.0](https://github.com/FilOzone/synapse-sdk/compare/v0.25.1...v0.26.0) (2025-09-19)
+
+### Features
+
+* add mainnet address, add --network flag to sp-tool ([#231](https://github.com/FilOzone/synapse-sdk/issues/231)) ([d0b5242](https://github.com/FilOzone/synapse-sdk/commit/d0b5242fafec72b0f295df05bc3c2219c754b9e3))
+
 ## [0.25.1](https://github.com/FilOzone/synapse-sdk/compare/v0.25.0...v0.25.1) (2025-09-15)
 
 ### Bug Fixes
