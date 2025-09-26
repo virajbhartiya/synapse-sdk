@@ -348,17 +348,23 @@ export class WarmStorageService {
       try {
         const base = await this.getDataSet(pdpVerifierDataSetId)
 
+        // Parallelize independent calls
         const [isLive, listenerResult, metadata] = await Promise.all([
           pdpVerifier.dataSetLive(pdpVerifierDataSetId),
           pdpVerifier.getDataSetListener(pdpVerifierDataSetId).catch(() => null),
           this.getDataSetMetadata(pdpVerifierDataSetId).catch(() => Object.create(null) as Record<string, string>),
         ])
 
+        // Check if this data set is managed by our Warm Storage contract
         const isManaged =
           listenerResult != null && listenerResult.toLowerCase() === this._warmStorageAddress.toLowerCase()
 
-        if (onlyManaged && !isManaged) return null
+        // Skip unmanaged data sets if onlyManaged is true
+        if (onlyManaged && !isManaged) {
+          return null // Will be filtered out
+        }
 
+        // Get next piece ID only if the data set is live
         const nextPieceId = isLive ? await pdpVerifier.getNextPieceId(pdpVerifierDataSetId) : 0n
 
         return {
@@ -378,7 +384,10 @@ export class WarmStorageService {
       }
     })
 
+    // Wait for all promises to resolve
     const results = await Promise.all(enhancedDataSetsPromises)
+
+    // Filter out null values (from skipped data sets when onlyManaged is true)
     return results.filter((result): result is EnhancedDataSetInfo => result !== null)
   }
 
