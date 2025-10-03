@@ -20,36 +20,36 @@
   },
   "homepage": "https://github.com/FilOzone/synapse-sdk/tree/main/packages/synapse-sdk",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "import": "./dist/src/index.js",
+      "types": "./dist/src/index.d.ts"
     },
     "./piece": {
-      "import": "./dist/piece/index.js",
-      "types": "./dist/piece/index.d.ts"
+      "import": "./dist/src/piece/index.js",
+      "types": "./dist/src/piece/index.d.ts"
     },
     "./pdp": {
-      "import": "./dist/pdp/index.js",
-      "types": "./dist/pdp/index.d.ts"
+      "import": "./dist/src/pdp/index.js",
+      "types": "./dist/src/pdp/index.d.ts"
     },
     "./payments": {
-      "import": "./dist/payments/index.js",
-      "types": "./dist/payments/index.d.ts"
+      "import": "./dist/src/payments/index.js",
+      "types": "./dist/src/payments/index.d.ts"
     },
     "./warm-storage": {
-      "import": "./dist/warm-storage/index.js",
-      "types": "./dist/warm-storage/index.d.ts"
+      "import": "./dist/src/warm-storage/index.js",
+      "types": "./dist/src/warm-storage/index.d.ts"
     },
     "./subgraph": {
-      "import": "./dist/subgraph/index.js",
-      "types": "./dist/subgraph/index.d.ts"
+      "import": "./dist/src/subgraph/index.js",
+      "types": "./dist/src/subgraph/index.d.ts"
     },
     "./sp-registry": {
-      "import": "./dist/sp-registry/index.js",
-      "types": "./dist/sp-registry/index.d.ts"
+      "import": "./dist/src/sp-registry/index.js",
+      "types": "./dist/src/sp-registry/index.d.ts"
     }
   },
   "scripts": {
