@@ -4,9 +4,9 @@
 
 ## Packages
 
-- [@filoz/synapse-sdk](https://github.com/FilOzone/synapse-sdk/tree/main/packages/synapse-sdk) - Synapse SDK for Filecoin Onchain Cloud
-<!-- - [@filoz/synapse-react](https://github.com/FilOzone/synapse-sdk/tree/main/packages/synapse-sdk) - Synapse for React
-- [@filoz/synapse-core](https://github.com/FilOzone/synapse-sdk/tree/main/packages/synapse-sdk) - Core Filecoin Onchain Cloud contract actions -->
+- [@filoz/synapse-sdk](https://github.com/FilOzone/synapse-sdk/tree/master/packages/synapse-sdk) - Synapse SDK for Filecoin Onchain Cloud
+<!-- - [@filoz/synapse-react](https://github.com/FilOzone/synapse-sdk/tree/master/packages/synapse-sdk) - Synapse for React
+- [@filoz/synapse-core](https://github.com/FilOzone/synapse-sdk/tree/master/packages/synapse-sdk) - Core Filecoin Onchain Cloud contract actions -->
 
 ## Docs
 
@@ -16,8 +16,8 @@ Check the documentation [website](https://synapse.filecoin.services/)
 
 The `examples` folder has many examples on how to start using Synapse in different environments and frameworks.
 
-- [`script-tag`](https://github.com/FilOzone/synapse-sdk/tree/main/examples/script-tag) - Use Synapse with CDN script tag.
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz_small.svg)](https://stackblitz.com/github/FilOzone/synapse-sdk/tree/main/examples/script-tag?title=Synapse%20Script%20Tag&hideExplorer=1&theme=dark)
+- [`script-tag`](https://github.com/FilOzone/synapse-sdk/tree/master/examples/script-tag) - Use Synapse with CDN script tag.
+[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz_small.svg)](https://stackblitz.com/github/FilOzone/synapse-sdk/tree/master/examples/script-tag?title=Synapse%20Script%20Tag&hideExplorer=1&theme=dark)
 
 To clone it locally:
 
