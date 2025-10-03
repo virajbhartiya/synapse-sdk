@@ -2,8 +2,6 @@
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
   "separate-pull-requests": true,
   "release-type": "node",
-  "last-release-sha": "d0e8fb955105ff23cdd0bcd7efb627fc4ca95067",
-  "bootstrap-sha": "d0e8fb955105ff23cdd0bcd7efb627fc4ca95067",
   "packages": {
     "packages/synapse-sdk": {
       "bump-minor-pre-major": false,
@@ -26,12 +24,12 @@
         {
           "type": "chore",
           "section": "Chores",
-          "hidden": true
+          "hidden": false
         },
         {
           "type": "docs",
           "section": "Documentation",
-          "hidden": true
+          "hidden": false
         }
       ]
     }
