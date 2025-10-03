@@ -1,13 +1,11 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "separate-pull-requests": true,
+  "release-type": "node",
   "packages": {
-    ".": {
-      "release-type": "node",
-      "changelog-path": "CHANGELOG.md",
+    "packages/synapse-sdk": {
       "bump-minor-pre-major": false,
       "bump-patch-for-minor-pre-major": false,
-      "draft": false,
-      "prerelease": false,
       "include-v-in-tag": true,
       "include-component-in-tag": false,
       "always-bump-patch": true,

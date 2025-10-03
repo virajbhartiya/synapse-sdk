@@ -1,4 +1,4 @@
-name: Publish Documentation
+name: documentation
 on:
   push:
     branches:
@@ -10,6 +10,9 @@ on:
   workflow_call:
 permissions:
   contents: read
+concurrency:
+  group: docs
+  cancel-in-progress: false
 jobs:
   publish:
     runs-on: ubuntu-latest
