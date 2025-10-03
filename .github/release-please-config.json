@@ -2,8 +2,8 @@
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
   "separate-pull-requests": true,
   "release-type": "node",
-  "last-release-sha": "6a9636c4cd498baa09d11d33c1a985431cf69e0a",
-  "bootstrap-sha": "6a9636c4cd498baa09d11d33c1a985431cf69e0a",
+  "last-release-sha": "d0e8fb955105ff23cdd0bcd7efb627fc4ca95067",
+  "bootstrap-sha": "d0e8fb955105ff23cdd0bcd7efb627fc4ca95067",
   "packages": {
     "packages/synapse-sdk": {
       "bump-minor-pre-major": false,
