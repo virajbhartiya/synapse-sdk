@@ -2,12 +2,12 @@
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
   "separate-pull-requests": true,
   "release-type": "node",
+  "last-release-sha": "6a9636c4cd498baa09d11d33c1a985431cf69e0a",
   "packages": {
     "packages/synapse-sdk": {
       "bump-minor-pre-major": false,
       "bump-patch-for-minor-pre-major": false,
       "include-v-in-tag": true,
-      "include-component-in-tag": false,
       "always-bump-patch": true,
       "pull-request-header": "📦 Release Preparation",
       "pull-request-footer": "\n\n## 🚀 How to Release\n\n1. **Review** the changelog and version bump in this PR\n2. **Merge this PR** to trigger the release\n3. After merging, the workflow will:\n   - Create a GitHub release with tag `{{version}}`\n   - Publish to npm automatically\n\n⚠️ **Note**: The release has NOT been created yet. It will only be created after you merge this PR.",
