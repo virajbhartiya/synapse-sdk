@@ -24,7 +24,7 @@ jobs:
           node-version: lts/*
       - run: pnpm install
       - run: pnpm -r --filter docs run build
-      - run: pnpx wrangler deploy --cwd docs --production
+      - run: pnpx wrangler deploy --cwd docs --env production
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
