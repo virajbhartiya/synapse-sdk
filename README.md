@@ -37,5 +37,5 @@ Read contributing  [guidelines](.github/CONTRIBUTING.md).
 
 ## License
 
-Dual-licensed: [MIT](./LICENSE-MIT), [Apache Software License v2](./LICENSE-APACHE) by way of the
+Dual-licensed: [MIT](./LICENSE.md), [Apache Software License v2](./LICENSE.md) by way of the
 [Permissive License Stack](https://protocol.ai/blog/announcing-the-permissive-license-stack/).
