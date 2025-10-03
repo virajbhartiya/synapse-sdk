@@ -3,6 +3,7 @@
   "separate-pull-requests": true,
   "release-type": "node",
   "last-release-sha": "6a9636c4cd498baa09d11d33c1a985431cf69e0a",
+  "bootstrap-sha": "6a9636c4cd498baa09d11d33c1a985431cf69e0a",
   "packages": {
     "packages/synapse-sdk": {
       "bump-minor-pre-major": false,
