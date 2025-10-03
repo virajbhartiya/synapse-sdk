@@ -51,3 +51,4 @@ jobs:
     if: |
       contains(fromJson(needs.release.outputs.paths_released), 'packages/synapse-sdk')
     uses: ./.github/workflows/docs.yml
+    secrets: inherit
