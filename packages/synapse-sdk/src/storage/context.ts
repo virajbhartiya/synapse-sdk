@@ -247,7 +247,7 @@ export class StorageContext {
     performance.mark('synapse:createDataSet-start')
 
     const signer = synapse.getSigner()
-    const signerAddress = await signer.getAddress()
+    const [signerAddress, clientAddress] = await Promise.all([signer.getAddress(), synapse.getClient().getAddress()])
 
     // Create a new data set
 
@@ -276,7 +276,13 @@ export class StorageContext {
 
     // Create the data set through the provider
     performance.mark('synapse:pdpServer.createDataSet-start')
-    const createResult = await pdpServer.createDataSet(nextDatasetId, provider.payee, finalMetadata, warmStorageAddress)
+    const createResult = await pdpServer.createDataSet(
+      nextDatasetId,
+      provider.payee,
+      clientAddress,
+      finalMetadata,
+      warmStorageAddress
+    )
     performance.mark('synapse:pdpServer.createDataSet-end')
     performance.measure(
       'synapse:pdpServer.createDataSet',
@@ -429,8 +435,8 @@ export class StorageContext {
     providerResolver: ProviderResolver,
     options: StorageServiceOptions
   ): Promise<ProviderSelectionResult> {
-    const signer = synapse.getSigner()
-    const signerAddress = await signer.getAddress()
+    const client = synapse.getClient()
+    const clientAddress = await client.getAddress()
 
     // Handle explicit data set ID selection (highest priority)
     if (options.dataSetId != null) {
@@ -438,7 +444,7 @@ export class StorageContext {
         options.dataSetId,
         warmStorageService,
         providerResolver,
-        signerAddress,
+        clientAddress,
         options
       )
     }
@@ -449,7 +455,7 @@ export class StorageContext {
     // Handle explicit provider ID selection
     if (options.providerId != null) {
       return await StorageContext.resolveByProviderId(
-        signerAddress,
+        clientAddress,
         options.providerId,
         requestedMetadata,
         warmStorageService,
@@ -463,18 +469,18 @@ export class StorageContext {
         options.providerAddress,
         warmStorageService,
         providerResolver,
-        signerAddress,
+        clientAddress,
         requestedMetadata
       )
     }
 
     // Smart selection when no specific parameters provided
     return await StorageContext.smartSelectProvider(
-      signerAddress,
+      clientAddress,
       requestedMetadata,
       warmStorageService,
       providerResolver,
-      signer
+      client
     )
   }
 
