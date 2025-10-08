@@ -4,6 +4,26 @@
 
 * add terminateDataSet functionality ([#230](https://github.com/FilOzone/synapse-sdk/issues/230)) ([ffaacac](https://github.com/FilOzone/synapse-sdk/commit/ffaacac507b4882abfc33d3de72fe9fa98843cd2))
 
+## [0.30.0](https://github.com/virajbhartiya/synapse-sdk/compare/synapse-sdk-v0.29.3...synapse-sdk-v0.30.0) (2025-10-08)
+
+
+### Features
+
+* reset versioning to continue 0.x development ([ce58d21](https://github.com/virajbhartiya/synapse-sdk/commit/ce58d215492a8a80f836d9451655b8b70d680f2a))
+
+
+### Bug Fixes
+
+* clean up synapse-sdk readme ([8a7f949](https://github.com/virajbhartiya/synapse-sdk/commit/8a7f949b90e3e0e196247dd7a006d8e7dab9a11f))
+* update package.json paths to use 'dist/src' directory ([625b269](https://github.com/virajbhartiya/synapse-sdk/commit/625b2699266a42a272bc27af3127475fee107b28))
+
+
+### Chores
+
+* **master:** release synapse-sdk 0.29.2 ([#248](https://github.com/virajbhartiya/synapse-sdk/issues/248)) ([7cff497](https://github.com/virajbhartiya/synapse-sdk/commit/7cff497fe934704cbf02a72eeb83a078eb0b1bf7))
+* **master:** release synapse-sdk 0.29.3 ([#270](https://github.com/virajbhartiya/synapse-sdk/issues/270)) ([6ddbac3](https://github.com/virajbhartiya/synapse-sdk/commit/6ddbac3e1d9087391b1dbe99191da7ff396ec41b))
+* monorepo seyup ([#267](https://github.com/virajbhartiya/synapse-sdk/issues/267)) ([13e527c](https://github.com/virajbhartiya/synapse-sdk/commit/13e527c05fa803791217b1bc51de1ccf67b44e9a))
+
 ## [0.29.3](https://github.com/FilOzone/synapse-sdk/compare/synapse-sdk-v0.29.2...synapse-sdk-v0.29.3) (2025-10-03)
 
 
