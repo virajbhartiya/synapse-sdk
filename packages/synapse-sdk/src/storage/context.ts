@@ -1260,6 +1260,32 @@ export class StorageContext {
     return dataSetData.pieces.map((piece) => piece.pieceCid)
   }
 
+  private async _getPieceIdByCID(pieceCID: string | PieceCID): Promise<number> {
+    const parsedPieceCID = asPieceCID(pieceCID)
+    if (parsedPieceCID == null) {
+      throw createError('StorageContext', 'deletePiece', 'Invalid PieceCID provided')
+    }
+
+    const dataSetData = await this._pdpServer.getDataSet(this._dataSetId)
+    const pieceData = dataSetData.pieces.find((piece) => piece.pieceCid.toString() === parsedPieceCID.toString())
+    if (pieceData == null) {
+      throw createError('StorageContext', 'deletePiece', 'Piece not found in data set')
+    }
+    return pieceData.pieceId
+  }
+
+  /**
+   * Delete a piece with given CID from this data set
+   * @param piece - The PieceCID identifier or a piece number to delete by pieceID
+   * @returns Transaction hash of the delete operation
+   */
+  async deletePiece(piece: string | PieceCID | number): Promise<string> {
+    const pieceId = typeof piece === 'number' ? piece : await this._getPieceIdByCID(piece)
+    const dataSetInfo = await this._warmStorageService.getDataSet(this._dataSetId)
+
+    return this._pdpServer.deletePiece(this._dataSetId, dataSetInfo.clientDataSetId, pieceId)
+  }
+
   /**
    * Check if a piece exists on this service provider.
    * @param pieceCid - The PieceCID (piece CID) to check
