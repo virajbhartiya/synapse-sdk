@@ -15,14 +15,15 @@ import type { PieceCID } from '../piece.ts'
 import * as SP from '../sp.ts'
 import { signAddPieces } from '../typed-data/sign-add-pieces.ts'
 import { signCreateDataSet } from '../typed-data/sign-create-dataset.ts'
+import { capabilitiesListToObject } from '../utils/capabilities.ts'
 import {
   datasetMetadataObjectToEntry,
   type MetadataObject,
   metadataArrayToObject,
   pieceMetadataObjectToEntry,
 } from '../utils/metadata.ts'
+import { decodePDPCapabilities, type PDPOffering, type PDPProvider } from '../utils/pdp-capabilities.ts'
 import { randU256 } from '../utils/rand.ts'
-import { decodeCapabilities, type PDPOffering, type PDPProvider } from './providers.ts'
 
 /**
  * ABI function to get the client data sets
@@ -97,7 +98,9 @@ export async function getDataSets(client: Client<Transport, Chain>, options: Get
     })
 
     // getProviderWithProduct returns {providerId, providerInfo, product, productCapabilityValues}
-    const pdpCaps = decodeCapabilities(pdpOffering.product.capabilityKeys, pdpOffering.productCapabilityValues)
+    const pdpCaps = decodePDPCapabilities(
+      capabilitiesListToObject(pdpOffering.product.capabilityKeys, pdpOffering.productCapabilityValues)
+    )
 
     return {
       ...dataSet,
@@ -169,7 +172,9 @@ export async function getDataSet(client: Client<Transport, Chain>, options: GetD
   })
 
   // getProviderWithProduct returns {providerId, providerInfo, product, productCapabilityValues}
-  const pdpCaps = decodeCapabilities(pdpOffering.product.capabilityKeys, pdpOffering.productCapabilityValues)
+  const pdpCaps = decodePDPCapabilities(
+    capabilitiesListToObject(pdpOffering.product.capabilityKeys, pdpOffering.productCapabilityValues)
+  )
 
   return {
     ...dataSet,
