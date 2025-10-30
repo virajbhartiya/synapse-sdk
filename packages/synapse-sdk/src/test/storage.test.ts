@@ -1,21 +1,32 @@
-/* globals describe it beforeEach afterEach */
+/* globals describe it beforeEach afterEach before after */
 import { assert } from 'chai'
 import { ethers } from 'ethers'
+import { setup } from 'iso-web/msw'
+import { CID } from 'multiformats/cid'
+import { calculate as calculatePieceCID } from '../piece/index.ts'
 import { StorageContext } from '../storage/context.ts'
 import type { Synapse } from '../synapse.ts'
 import type { PieceCID, ProviderInfo } from '../types.ts'
 import { SIZE_CONSTANTS } from '../utils/constants.ts'
+import { ADDRESSES, JSONRPC, PRIVATE_KEYS, presets } from './mocks/jsonrpc/index.ts'
 import { createMockProviderInfo, createSimpleProvider, setupProviderRegistryMocks } from './test-utils.ts'
+
+// MSW server for JSONRPC mocking
+const server = setup([])
 
 // Create a mock Ethereum provider that doesn't try to connect
 const mockEthProvider = {
   getTransaction: async (_hash: string) => null,
   getNetwork: async () => ({ chainId: BigInt(314159), name: 'calibration' }),
   call: async (_tx: any) => {
-    // Mock contract calls - return empty data for registry calls
+    // Mock contract calls - return empty data for other calls
     return '0x'
   },
 } as any
+
+function cidBytesToContractHex(bytes: Uint8Array): `0x${string}` {
+  return ethers.hexlify(bytes) as `0x${string}`
+}
 
 // Mock Synapse instance
 const mockSynapse = {
@@ -240,6 +251,19 @@ function mockGetPieceAdditionStatus(
 }
 
 describe('StorageService', () => {
+  // MSW lifecycle hooks
+  before(async () => {
+    await server.start({ quiet: true })
+  })
+
+  after(() => {
+    server.stop()
+  })
+
+  beforeEach(() => {
+    server.resetHandlers()
+  })
+
   describe('create() factory method', () => {
     let cleanupMocks: (() => void) | null = null
     let originalFetch: typeof global.fetch
@@ -2934,12 +2958,29 @@ describe('StorageService', () => {
   })
 
   describe('getDataSetPieces', () => {
+    let provider: ethers.Provider
+    let signer: ethers.Signer
+
+    beforeEach(() => {
+      provider = new ethers.JsonRpcProvider('https://api.calibration.node.glif.io/rpc/v1')
+      signer = new ethers.Wallet(PRIVATE_KEYS.key1, provider)
+    })
+
     it('should successfully fetch data set pieces', async () => {
       const mockWarmStorageService = {
         getServiceProviderRegistryAddress: () => '0x0000000000000000000000000000000000000001',
+        getPDPVerifierAddress: () => ADDRESSES.calibration.pdpVerifier,
       } as any
+
+      const testSynapse = {
+        getProvider: () => provider,
+        getSigner: () => signer,
+        getWarmStorageAddress: () => '0x1234567890123456789012345678901234567890',
+        getChainId: () => BigInt(314159),
+      } as any
+
       const service = new StorageContext(
-        mockSynapse,
+        testSynapse,
         mockWarmStorageService,
         mockProvider,
         123,
@@ -2968,12 +3009,20 @@ describe('StorageService', () => {
         nextChallengeEpoch: 1500,
       }
 
-      // Mock the PDP server getDataSet method
-      const serviceAny = service as any
-      serviceAny._pdpServer.getDataSet = async (dataSetId: number): Promise<any> => {
-        assert.equal(dataSetId, 123)
-        return mockDataSetData
-      }
+      // Mock getActivePieces to return the expected pieces
+      const piecesData = mockDataSetData.pieces.map((piece) => {
+        const cid = CID.parse(piece.pieceCid)
+        return { data: cidBytesToContractHex(cid.bytes) }
+      })
+      server.use(
+        JSONRPC({
+          ...presets.basic,
+          pdpVerifier: {
+            ...presets.basic.pdpVerifier,
+            getActivePieces: () => [piecesData, [101n, 102n], false],
+          },
+        })
+      )
 
       const result = await service.getDataSetPieces()
 
@@ -2986,9 +3035,18 @@ describe('StorageService', () => {
     it('should handle empty data set pieces', async () => {
       const mockWarmStorageService = {
         getServiceProviderRegistryAddress: () => '0x0000000000000000000000000000000000000001',
+        getPDPVerifierAddress: () => ADDRESSES.calibration.pdpVerifier,
       } as any
+
+      const testSynapse = {
+        getProvider: () => provider,
+        getSigner: () => signer,
+        getWarmStorageAddress: () => '0x1234567890123456789012345678901234567890',
+        getChainId: () => BigInt(314159),
+      } as any
+
       const service = new StorageContext(
-        mockSynapse,
+        testSynapse,
         mockWarmStorageService,
         mockProvider,
         123,
@@ -2998,17 +3056,16 @@ describe('StorageService', () => {
         {}
       )
 
-      const mockDataSetData = {
-        id: 292,
-        pieces: [],
-        nextChallengeEpoch: 1500,
-      }
-
-      // Mock the PDP server getDataSet method
-      const serviceAny = service as any
-      serviceAny._pdpServer.getDataSet = async (): Promise<any> => {
-        return mockDataSetData
-      }
+      // Mock getActivePieces to return no pieces
+      server.use(
+        JSONRPC({
+          ...presets.basic,
+          pdpVerifier: {
+            ...presets.basic.pdpVerifier,
+            getActivePieces: () => [[], [], false],
+          },
+        })
+      )
 
       const result = await service.getDataSetPieces()
 
@@ -3019,9 +3076,18 @@ describe('StorageService', () => {
     it('should handle invalid CID in response', async () => {
       const mockWarmStorageService = {
         getServiceProviderRegistryAddress: () => '0x0000000000000000000000000000000000000001',
+        getPDPVerifierAddress: () => ADDRESSES.calibration.pdpVerifier,
       } as any
+
+      const testSynapse = {
+        getProvider: () => provider,
+        getSigner: () => signer,
+        getWarmStorageAddress: () => '0x1234567890123456789012345678901234567890',
+        getChainId: () => BigInt(314159),
+      } as any
+
       const service = new StorageContext(
-        mockSynapse,
+        testSynapse,
         mockWarmStorageService,
         mockProvider,
         123,
@@ -3031,37 +3097,43 @@ describe('StorageService', () => {
         {}
       )
 
-      const mockDataSetData = {
-        id: 292,
-        pieces: [
-          {
-            pieceId: 101,
-            pieceCid: 'invalid-cid-format',
-            subPieceCid: 'bafkzcibeqcad6efnpwn62p5vvs5x3nh3j7xkzfgb3xtitcdm2hulmty3xx4tl3wace',
-            subPieceOffset: 0,
+      // Mock getActivePieces to return invalid CID data
+      const invalidCidBytes = cidBytesToContractHex(ethers.toUtf8Bytes('invalid-cid-format'))
+      server.use(
+        JSONRPC({
+          ...presets.basic,
+          pdpVerifier: {
+            ...presets.basic.pdpVerifier,
+            getActivePieces: () => [[{ data: invalidCidBytes }], [101n], false],
           },
-        ],
-        nextChallengeEpoch: 1500,
-      }
+        })
+      )
 
-      // Mock the PDP server getDataSet method
-      const serviceAny = service as any
-      serviceAny._pdpServer.getDataSet = async (): Promise<any> => {
-        return mockDataSetData
+      // The new implementation should throw an error when trying to decode invalid CID data
+      try {
+        await service.getDataSetPieces()
+        assert.fail('Expected an error to be thrown for invalid CID data')
+      } catch (error: any) {
+        // The error occurs during CID.decode(), not during PieceCID validation
+        assert.include(error.message, 'Invalid CID version')
       }
-
-      const result = await service.getDataSetPieces()
-      assert.isArray(result)
-      assert.equal(result.length, 1)
-      assert.equal(result[0].toString(), 'invalid-cid-format')
     })
 
     it('should handle PDP server errors', async () => {
       const mockWarmStorageService = {
         getServiceProviderRegistryAddress: () => '0x0000000000000000000000000000000000000001',
+        getPDPVerifierAddress: () => ADDRESSES.calibration.pdpVerifier,
       } as any
+
+      const testSynapse = {
+        getProvider: () => provider,
+        getSigner: () => signer,
+        getWarmStorageAddress: () => '0x1234567890123456789012345678901234567890',
+        getChainId: () => BigInt(314159),
+      } as any
+
       const service = new StorageContext(
-        mockSynapse,
+        testSynapse,
         mockWarmStorageService,
         mockProvider,
         123,
@@ -3071,15 +3143,22 @@ describe('StorageService', () => {
         {}
       )
 
-      // Mock the PDP server getDataSet method to throw error
-      const serviceAny = service as any
-      serviceAny._pdpServer.getDataSet = async (): Promise<any> => {
-        throw new Error('Data set not found: 999')
-      }
+      // Mock getActivePieces to throw an error
+      server.use(
+        JSONRPC({
+          ...presets.basic,
+          pdpVerifier: {
+            ...presets.basic.pdpVerifier,
+            getActivePieces: () => {
+              throw new Error('Data set not found: 999')
+            },
+          },
+        })
+      )
 
       try {
         await service.getDataSetPieces()
-        assert.fail('Should have thrown error for server error')
+        assert.fail('Should have thrown error for contract call error')
       } catch (error: any) {
         assert.include(error.message, 'Data set not found: 999')
       }
@@ -3535,6 +3614,217 @@ describe('StorageService', () => {
       assert.isNull(status.dataSetLastProven)
       assert.isNull(status.dataSetNextProofDue)
       assert.isUndefined(status.pieceId)
+    })
+  })
+
+  describe('getPieces', () => {
+    let provider: ethers.Provider
+    let signer: ethers.Signer
+    let mockWarmStorage: any
+    let testSynapse: any
+
+    beforeEach(() => {
+      provider = new ethers.JsonRpcProvider('https://api.calibration.node.glif.io/rpc/v1')
+      signer = new ethers.Wallet(PRIVATE_KEYS.key1, provider)
+
+      mockWarmStorage = {
+        getPDPVerifierAddress: () => ADDRESSES.calibration.pdpVerifier,
+      }
+
+      testSynapse = {
+        getProvider: () => provider,
+        getSigner: () => signer,
+        getWarmStorageAddress: () => '0x1234567890123456789012345678901234567890',
+        getChainId: () => BigInt(314159),
+      }
+    })
+
+    const createContext = () => {
+      return new StorageContext(testSynapse, mockWarmStorage, TEST_PROVIDERS.provider1, 123, { withCDN: false }, {})
+    }
+
+    it('should be available on StorageContext', () => {
+      // Basic test to ensure the method exists
+      assert.isFunction(StorageContext.prototype.getPieces)
+    })
+
+    it('should get all active pieces with pagination', async () => {
+      // Use actual valid PieceCIDs from test data
+      const piece1Cid = calculatePieceCID(new Uint8Array(128).fill(1))
+      const piece2Cid = calculatePieceCID(new Uint8Array(256).fill(2))
+      const piece3Cid = calculatePieceCID(new Uint8Array(512).fill(3))
+
+      // Mock getActivePieces to return paginated results
+      server.use(
+        JSONRPC({
+          ...presets.basic,
+          pdpVerifier: {
+            ...presets.basic.pdpVerifier,
+            getActivePieces: (args) => {
+              const offset = Number(args[1])
+
+              // First page: return 2 pieces with hasMore=true
+              if (offset === 0) {
+                return [
+                  [{ data: cidBytesToContractHex(piece1Cid.bytes) }, { data: cidBytesToContractHex(piece2Cid.bytes) }],
+                  [1n, 2n],
+                  true,
+                ]
+              }
+              // Second page: return 1 piece with hasMore=false
+              if (offset === 2) {
+                return [[{ data: cidBytesToContractHex(piece3Cid.bytes) }], [3n], false]
+              }
+              return [[], [], false]
+            },
+          },
+        })
+      )
+
+      const context = createContext()
+
+      // Test getPieces - should collect all pages
+      const allPieces = []
+      for await (const piece of context.getPieces({ batchSize: 2 })) {
+        allPieces.push(piece)
+      }
+
+      assert.equal(allPieces.length, 3, 'Should return all 3 pieces across pages')
+      assert.equal(allPieces[0].pieceId, 1)
+      assert.equal(allPieces[0].pieceCid.toString(), piece1Cid.toString())
+
+      assert.equal(allPieces[1].pieceId, 2)
+      assert.equal(allPieces[1].pieceCid.toString(), piece2Cid.toString())
+
+      assert.equal(allPieces[2].pieceId, 3)
+      assert.equal(allPieces[2].pieceCid.toString(), piece3Cid.toString())
+    })
+
+    it('should handle empty results', async () => {
+      // Mock getActivePieces to return no pieces
+      server.use(
+        JSONRPC({
+          ...presets.basic,
+          pdpVerifier: {
+            ...presets.basic.pdpVerifier,
+            getActivePieces: () => [[], [], false],
+          },
+        })
+      )
+
+      const context = createContext()
+
+      const allPieces = []
+      for await (const piece of context.getPieces()) {
+        allPieces.push(piece)
+      }
+      assert.equal(allPieces.length, 0, 'Should return empty array for data set with no pieces')
+    })
+
+    it('should handle AbortSignal in getPieces', async () => {
+      const controller = new AbortController()
+
+      server.use(JSONRPC(presets.basic))
+
+      const context = createContext()
+
+      // Abort before making the call
+      controller.abort()
+
+      try {
+        for await (const _piece of context.getPieces({ signal: controller.signal })) {
+          // Should not reach here
+        }
+        assert.fail('Should have thrown an error')
+      } catch (error: any) {
+        assert.equal(error.message, 'StorageContext getPieces failed: Operation aborted')
+      }
+    })
+
+    it('should work with getPieces generator', async () => {
+      // Use actual valid PieceCIDs from test data
+      const piece1Cid = calculatePieceCID(new Uint8Array(128).fill(1))
+      const piece2Cid = calculatePieceCID(new Uint8Array(256).fill(2))
+
+      // Mock getActivePieces to return paginated results
+      server.use(
+        JSONRPC({
+          ...presets.basic,
+          pdpVerifier: {
+            ...presets.basic.pdpVerifier,
+            getActivePieces: (args) => {
+              const offset = Number(args[1])
+
+              // First page
+              if (offset === 0) {
+                return [[{ data: cidBytesToContractHex(piece1Cid.bytes) }], [1n], true]
+              }
+              // Second page
+              if (offset === 1) {
+                return [[{ data: cidBytesToContractHex(piece2Cid.bytes) }], [2n], false]
+              }
+              return [[], [], false]
+            },
+          },
+        })
+      )
+
+      const context = createContext()
+
+      // Test the async generator
+      const pieces = []
+      for await (const piece of context.getPieces({ batchSize: 1 })) {
+        pieces.push(piece)
+      }
+
+      assert.equal(pieces.length, 2, 'Should yield 2 pieces')
+      assert.equal(pieces[0].pieceId, 1)
+      assert.equal(pieces[0].pieceCid.toString(), piece1Cid.toString())
+      assert.equal(pieces[1].pieceId, 2)
+      assert.equal(pieces[1].pieceCid.toString(), piece2Cid.toString())
+    })
+
+    it('should handle AbortSignal in getPieces generator during iteration', async () => {
+      const controller = new AbortController()
+
+      const piece1Cid = calculatePieceCID(new Uint8Array(128).fill(1))
+
+      // Mock getActivePieces to return a result that triggers pagination
+      let callCount = 0
+      server.use(
+        JSONRPC({
+          ...presets.basic,
+          pdpVerifier: {
+            ...presets.basic.pdpVerifier,
+            getActivePieces: () => {
+              callCount++
+              // Only return data on first call, then abort
+              if (callCount === 1) {
+                setTimeout(() => controller.abort(), 0)
+                return [[{ data: cidBytesToContractHex(piece1Cid.bytes) }], [1n], true]
+              }
+              return [[], [], false]
+            },
+          },
+        })
+      )
+
+      const context = createContext()
+
+      try {
+        const pieces = []
+        for await (const piece of context.getPieces({
+          batchSize: 1,
+          signal: controller.signal,
+        })) {
+          pieces.push(piece)
+          // Give the abort a chance to trigger
+          await new Promise((resolve) => setTimeout(resolve, 10))
+        }
+        assert.fail('Should have thrown an error')
+      } catch (error: any) {
+        assert.equal(error.message, 'StorageContext getPieces failed: Operation aborted')
+      }
     })
   })
 })

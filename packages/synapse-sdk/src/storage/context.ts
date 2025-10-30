@@ -28,6 +28,7 @@ import type { ethers } from 'ethers'
 import type { Hex } from 'viem'
 import type { PaymentsService } from '../payments/index.ts'
 import { PDPAuthHelper, PDPServer } from '../pdp/index.ts'
+import { PDPVerifier } from '../pdp/verifier.ts'
 import { asPieceCID } from '../piece/index.ts'
 import { SPRegistryService } from '../sp-registry/index.ts'
 import type { ProviderInfo } from '../sp-registry/types.ts'
@@ -1004,17 +1005,68 @@ export class StorageContext {
   }
 
   /**
-   * Get the list of piece CIDs for this service service's data set by querying the PDP server.
+   * Get the list of piece CIDs for this service service's data set.
    * @returns Array of piece CIDs as PieceCID objects
+   * @deprecated Use getPieces() generator for better memory efficiency with large data sets
    */
   async getDataSetPieces(): Promise<PieceCID[]> {
     if (this.dataSetId == null) {
       return []
     }
-    const dataSetData = await this._pdpServer.getDataSet(this.dataSetId)
-    return dataSetData.pieces.map((piece) => piece.pieceCid)
+
+    const pieces: PieceCID[] = []
+    for await (const { pieceCid } of this.getPieces()) {
+      pieces.push(pieceCid)
+    }
+    return pieces
   }
 
+  /**
+   * Get all active pieces for this data set as an async generator.
+   * This provides lazy evaluation and better memory efficiency for large data sets.
+   * @param options - Optional configuration object
+   * @param options.batchSize - The batch size for each pagination call (default: 100)
+   * @param options.signal - Optional AbortSignal to cancel the operation
+   * @yields Object with pieceCid and pieceId - the piece ID is needed for certain operations like deletion
+   */
+  async *getPieces(options?: {
+    batchSize?: number
+    signal?: AbortSignal
+  }): AsyncGenerator<{ pieceCid: PieceCID; pieceId: number }> {
+    if (this._dataSetId == null) {
+      return
+    }
+    const pdpVerifierAddress = this._warmStorageService.getPDPVerifierAddress()
+    const pdpVerifier = new PDPVerifier(this._synapse.getProvider(), pdpVerifierAddress)
+
+    const batchSize = options?.batchSize ?? 100
+    const signal = options?.signal
+    let offset = 0
+    let hasMore = true
+
+    while (hasMore) {
+      if (signal?.aborted) {
+        throw createError('StorageContext', 'getPieces', 'Operation aborted')
+      }
+
+      const result = await pdpVerifier.getActivePieces(this._dataSetId, { offset, limit: batchSize, signal })
+
+      // Yield pieces one by one for lazy evaluation
+      for (let i = 0; i < result.pieces.length; i++) {
+        if (signal?.aborted) {
+          throw createError('StorageContext', 'getPieces', 'Operation aborted')
+        }
+
+        yield {
+          pieceCid: result.pieces[i].pieceCid,
+          pieceId: result.pieces[i].pieceId,
+        }
+      }
+
+      hasMore = result.hasMore
+      offset += batchSize
+    }
+  }
   private async _getPieceIdByCID(pieceCID: string | PieceCID): Promise<number> {
     if (this.dataSetId == null) {
       throw createError('StorageContext', 'getPieceIdByCID', 'Data set not found')
