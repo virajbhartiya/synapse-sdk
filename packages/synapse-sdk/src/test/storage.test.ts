@@ -143,24 +143,12 @@ const mockProvider: ProviderInfo = createSimpleProvider({
 })
 
 // Helper to create a standard mock WarmStorageService
-function createMockWarmStorageService(providers: ProviderInfo[], dataSets: any[] = [], overrides: any = {}) {
+function createMockWarmStorageService(dataSets?: any[], overrides: any = {}) {
   return {
-    getAllApprovedProviders: async () => providers,
-    getClientDataSetsWithDetails: async () => dataSets,
-    getNextClientDataSetId: async () =>
-      dataSets.length > 0 ? Math.max(...dataSets.map((d) => d.clientDataSetId)) + 1 : 1,
-    getProviderIdByAddress: async (address: string) => {
-      const provider = providers.find((p) => p.serviceProvider.toLowerCase() === address.toLowerCase())
-      return provider?.id ?? 0
-    },
-    getApprovedProvider: async (id: number) => providers.find((p) => p.id === id) ?? null,
+    getClientDataSetsWithDetails: async () => dataSets ?? [],
     getServiceProviderRegistryAddress: () => '0x0000000000000000000000000000000000000001',
-    getApprovedProviderIds: async () => providers.map((p) => p.id),
-    isProviderIdApproved: async (id: number) => providers.some((p) => p.id === id),
-    getDataSetMetadata: async (dataSetId: number) => {
-      const dataSet = dataSets.find((d) => d.pdpVerifierDataSetId === dataSetId)
-      return dataSet?.metadata ?? {}
-    },
+    getDataSetMetadata: async () => ({}),
+    getApprovedProviderIds: async () => [],
     ...overrides,
   } as any
 }
@@ -216,38 +204,6 @@ function mockAddPieces(
   }
 
   return txHash
-}
-
-// Helper to mock PDPServer.getPieceAdditionStatus with standard behavior
-function mockGetPieceAdditionStatus(
-  serviceAny: any,
-  options: {
-    onCall?: (dataSetId: number, txHash: string) => void
-    shouldFail?: boolean
-    failureMessage?: string
-    customResponse?: any
-  } = {}
-) {
-  serviceAny._pdpServer.getPieceAdditionStatus = async (dataSetId: number, txHash: string): Promise<any> => {
-    if (options.shouldFail) {
-      throw new Error(options.failureMessage || 'Piece addition status not found')
-    }
-
-    if (options.onCall) {
-      options.onCall(dataSetId, txHash)
-    }
-
-    if (options.customResponse) {
-      return options.customResponse
-    }
-
-    const pieceIds = (serviceAny._pdpServer as any)._lastPieceIds || []
-    return {
-      txStatus: 'confirmed',
-      addMessageOk: true,
-      confirmedPieceIds: pieceIds,
-    }
-  }
 }
 
 describe('StorageService', () => {
@@ -336,7 +292,9 @@ describe('StorageService', () => {
         approvedIds: [1, 2],
       })
 
-      const mockWarmStorageService = createMockWarmStorageService(mockProviders, dataSets)
+      const mockWarmStorageService = createMockWarmStorageService(dataSets, {
+        getApprovedProviderIds: async () => [1, 2],
+      })
 
       // Create storage service without specifying providerId
       const service = await StorageContext.create(mockSynapse, mockWarmStorageService)
@@ -393,7 +351,9 @@ describe('StorageService', () => {
         approvedIds: [1, 2],
       })
 
-      const mockWarmStorageService = createMockWarmStorageService(mockProviders, dataSets)
+      const mockWarmStorageService = createMockWarmStorageService(dataSets, {
+        getApprovedProviderIds: async () => [1, 2],
+      })
 
       // Create storage service without specifying providerId
       const service = await StorageContext.create(mockSynapse, mockWarmStorageService, {
@@ -449,7 +409,9 @@ describe('StorageService', () => {
         approvedIds: [1, 2],
       })
 
-      const mockWarmStorageService = createMockWarmStorageService(mockProviders, dataSets)
+      const mockWarmStorageService = createMockWarmStorageService(dataSets, {
+        getApprovedProviderIds: async () => [1, 2],
+      })
 
       // Create storage service without specifying providerId
       const service = await StorageContext.create(mockSynapse, mockWarmStorageService)
@@ -479,18 +441,13 @@ describe('StorageService', () => {
         },
       ]
 
-      // Set up registry mocks with our specific provider
+      // Set up registry mocks
       cleanupMocks = setupProviderRegistryMocks(mockEthProvider, {
         providers: [mockProvider],
         approvedIds: [3],
       })
 
-      const mockWarmStorageService = createMockWarmStorageService([mockProvider], dataSets, {
-        getApprovedProvider: async (id: number) => {
-          assert.equal(id, 3)
-          return mockProvider
-        },
-      })
+      const mockWarmStorageService = createMockWarmStorageService(dataSets)
 
       // Create storage service with specific providerId
       const service = await StorageContext.create(mockSynapse, mockWarmStorageService, {
@@ -528,12 +485,7 @@ describe('StorageService', () => {
         approvedIds: [3],
       })
 
-      const mockWarmStorageService = createMockWarmStorageService([mockProvider], dataSets, {
-        getApprovedProvider: async (id: number) => {
-          assert.equal(id, 3)
-          return mockProvider
-        },
-      })
+      const mockWarmStorageService = createMockWarmStorageService(dataSets)
 
       // Track if getClientDataSetsWithDetails was called (should be skipped with forceCreateDataSet)
       let fetchedDataSets = false
@@ -548,9 +500,9 @@ describe('StorageService', () => {
         mockSynapse,
         mockWarmStorageService,
         {
-          getApprovedProvider: async () => mockProvider,
-          getApprovedProviders: async () => [mockProvider],
-          getApprovedProviderByAddress: async () => mockProvider,
+          getProvider: async () => mockProvider,
+          getProviders: async () => [mockProvider],
+          getProviderByAddress: async () => mockProvider,
         },
         { providerId: 3, forceCreateDataSet: true }
       )
@@ -589,16 +541,7 @@ describe('StorageService', () => {
         approvedIds: [3],
       })
 
-      const mockWarmStorageService = createMockWarmStorageService([mockProvider], dataSets, {
-        getApprovedProviderByAddress: async (address: string) => {
-          assert.equal(address.toLowerCase(), mockProvider.serviceProvider.toLowerCase())
-          return mockProvider
-        },
-        getApprovedProvider: async (id: number) => {
-          assert.equal(id, 3)
-          return mockProvider
-        },
-      })
+      const mockWarmStorageService = createMockWarmStorageService(dataSets)
 
       // Track if getClientDataSetsWithDetails was called (should be skipped with forceCreateDataSet)
       let fetchedDataSets = false
@@ -613,9 +556,9 @@ describe('StorageService', () => {
         mockSynapse,
         mockWarmStorageService,
         {
-          getApprovedProvider: async () => mockProvider,
-          getApprovedProviders: async () => [mockProvider],
-          getApprovedProviderByAddress: async () => mockProvider,
+          getProvider: async () => mockProvider,
+          getProviders: async () => [mockProvider],
+          getProviderByAddress: async () => mockProvider,
         },
         { providerAddress: mockProvider.serviceProvider, forceCreateDataSet: true }
       )
@@ -659,12 +602,7 @@ describe('StorageService', () => {
         approvedIds: [3],
       })
 
-      const mockWarmStorageService = createMockWarmStorageService([mockProvider], dataSets, {
-        getApprovedProvider: async (id: number) => {
-          assert.equal(id, 3)
-          return mockProvider
-        },
-      })
+      const mockWarmStorageService = createMockWarmStorageService(dataSets)
 
       // Track if a new data set was created
       let createdDataSet = false
@@ -691,7 +629,7 @@ describe('StorageService', () => {
         approvedIds: [],
       })
 
-      const mockWarmStorageService = createMockWarmStorageService([], [])
+      const mockWarmStorageService = createMockWarmStorageService()
 
       try {
         await StorageContext.create(mockSynapse, mockWarmStorageService, {})
@@ -709,12 +647,7 @@ describe('StorageService', () => {
         approvedIds: [1, 2],
       })
 
-      const mockWarmStorageService = createMockWarmStorageService(mockProviders, [], {
-        getApprovedProvider: async () => ({
-          serviceProvider: '0x0000000000000000000000000000000000000000', // Zero address
-          serviceURL: '',
-        }),
-      })
+      const mockWarmStorageService = createMockWarmStorageService()
 
       try {
         await StorageContext.create(mockSynapse, mockWarmStorageService, {
@@ -722,7 +655,7 @@ describe('StorageService', () => {
         })
         assert.fail('Should have thrown error')
       } catch (error: any) {
-        assert.include(error.message, 'Provider ID 999 is not currently approved')
+        assert.include(error.message, 'Provider ID 999 not found in registry')
       }
     })
 
@@ -754,9 +687,7 @@ describe('StorageService', () => {
         approvedIds: [3],
       })
 
-      const mockWarmStorageService = createMockWarmStorageService([mockProvider], mockDataSets, {
-        getApprovedProvider: async () => mockProvider,
-      })
+      const mockWarmStorageService = createMockWarmStorageService(mockDataSets)
 
       const service = await StorageContext.create(mockSynapse, mockWarmStorageService, {
         providerId: 3,
@@ -816,9 +747,7 @@ describe('StorageService', () => {
         approvedIds: [3],
       })
 
-      const mockWarmStorageService = createMockWarmStorageService([mockProvider], mockDataSets, {
-        getApprovedProvider: async () => mockProvider,
-      })
+      const mockWarmStorageService = createMockWarmStorageService(mockDataSets)
 
       const service = await StorageContext.create(mockSynapse, mockWarmStorageService, {
         providerId: 3,
@@ -859,9 +788,7 @@ describe('StorageService', () => {
         approvedIds: [3],
       })
 
-      const mockWarmStorageService = createMockWarmStorageService([mockProvider], dataSets, {
-        getApprovedProvider: async () => mockProvider,
-      })
+      const mockWarmStorageService = createMockWarmStorageService(dataSets)
 
       await StorageContext.create(mockSynapse, mockWarmStorageService, {
         providerId: 3,
@@ -910,16 +837,7 @@ describe('StorageService', () => {
         approvedIds: [3],
       })
 
-      const mockWarmStorageService = createMockWarmStorageService([mockProvider], mockDataSets, {
-        getProviderIdByAddress: async (addr: string) => {
-          assert.equal(addr, mockProvider.serviceProvider)
-          return 3
-        },
-        getApprovedProvider: async (id: number) => {
-          assert.equal(id, 3)
-          return mockProvider
-        },
-      })
+      const mockWarmStorageService = createMockWarmStorageService(mockDataSets)
 
       const service = await StorageContext.create(mockSynapse, mockWarmStorageService, {
         dataSetId: 456,
@@ -957,16 +875,7 @@ describe('StorageService', () => {
         approvedIds: [4],
       })
 
-      const mockWarmStorageService = createMockWarmStorageService([mockProvider], mockDataSets, {
-        getProviderIdByAddress: async (addr: string) => {
-          assert.equal(addr.toLowerCase(), mockProvider.serviceProvider.toLowerCase())
-          return 4
-        },
-        getApprovedProvider: async (id: number) => {
-          assert.equal(id, 4)
-          return mockProvider
-        },
-      })
+      const mockWarmStorageService = createMockWarmStorageService(mockDataSets)
 
       const service = await StorageContext.create(mockSynapse, mockWarmStorageService, {
         providerAddress: mockProvider.serviceProvider,
@@ -983,7 +892,7 @@ describe('StorageService', () => {
         approvedIds: [],
       })
 
-      const mockWarmStorageService = createMockWarmStorageService([], [])
+      const mockWarmStorageService = createMockWarmStorageService()
 
       try {
         await StorageContext.create(mockSynapse, mockWarmStorageService, {
@@ -1022,15 +931,7 @@ describe('StorageService', () => {
         approvedIds: [5],
       })
 
-      const mockWarmStorageService = createMockWarmStorageService([mockProvider1], mockDataSets, {
-        getProviderIdByAddress: async () => 5, // Different provider ID
-        getApprovedProvider: async (providerId: number) => {
-          if (providerId === 5) {
-            return mockProvider1 // Return the provider for ID 5
-          }
-          throw new Error(`Provider ID ${providerId} is not currently approved`)
-        },
-      })
+      const mockWarmStorageService = createMockWarmStorageService(mockDataSets)
 
       try {
         await StorageContext.create(mockSynapse, mockWarmStorageService, {
@@ -1051,16 +952,7 @@ describe('StorageService', () => {
         approvedIds: [],
       })
 
-      const mockWarmStorageService = createMockWarmStorageService([], [], {
-        getProviderIdByAddress: async () => 0, // Not approved
-        getApprovedProvider: async (_providerId: number) => {
-          // Return a non-approved provider (null address indicates not approved)
-          return {
-            serviceProvider: '0x0000000000000000000000000000000000000000',
-            serviceURL: '',
-          }
-        },
-      })
+      const mockWarmStorageService = createMockWarmStorageService()
 
       try {
         await StorageContext.create(mockSynapse, mockWarmStorageService, {
@@ -1068,7 +960,7 @@ describe('StorageService', () => {
         })
         assert.fail('Should have thrown error')
       } catch (error: any) {
-        assert.include(error.message, 'is not currently approved')
+        assert.include(error.message, 'not found in registry')
       }
     })
 
@@ -1176,7 +1068,7 @@ describe('StorageService', () => {
         approvedIds: [9],
       })
 
-      const mockWarmStorageService = createMockWarmStorageService([mockProvider], mockDataSets)
+      const mockWarmStorageService = createMockWarmStorageService(mockDataSets)
 
       // Should create new data set since existing one is not managed
       const service = await StorageContext.create(mockSynapse, mockWarmStorageService, {})
@@ -1205,18 +1097,13 @@ describe('StorageService', () => {
         },
       ]
 
-      const mockWarmStorageService = {
-        getClientDataSetsWithDetails: async () => mockDataSets,
-        getProviderIdByAddress: async () => 0, // Provider not approved
-        getApprovedProvider: async (_providerId: number) => {
-          // Return null for non-approved provider
-          return null
-        },
-        isProviderIdApproved: async (_providerId: number) => {
-          return false // Provider is not approved
-        },
-        getServiceProviderRegistryAddress: () => '0x0000000000000000000000000000000000000001',
-      } as any
+      // Set up registry mocks with no approved providers (so provider 999 is not approved)
+      cleanupMocks = setupProviderRegistryMocks(mockEthProvider, {
+        providers: [],
+        approvedIds: [],
+      })
+
+      const mockWarmStorageService = createMockWarmStorageService(mockDataSets)
 
       try {
         await StorageContext.create(mockSynapse, mockWarmStorageService, {
@@ -1224,7 +1111,8 @@ describe('StorageService', () => {
         })
         assert.fail('Should have thrown error')
       } catch (error: any) {
-        assert.include(error.message, 'is not currently approved')
+        // Provider 999 is not in the registry, so we'll get a "not found in registry" error
+        assert.include(error.message, 'not found in registry')
       }
     })
 
@@ -1402,10 +1290,7 @@ describe('StorageService', () => {
         },
       ]
 
-      const mockWarmStorageService = {
-        getClientDataSetsWithDetails: async () => mockDataSets,
-        getServiceProviderRegistryAddress: () => '0x0000000000000000000000000000000000000001',
-      } as any
+      const mockWarmStorageService = createMockWarmStorageService(mockDataSets)
 
       try {
         await StorageContext.create(mockSynapse, mockWarmStorageService, {
@@ -1812,7 +1697,7 @@ describe('StorageService', () => {
     })
 
     it('should enforce minimum size limit in preflightUpload', async () => {
-      const mockWarmStorageService = {} as any
+      const mockWarmStorageService = createMockWarmStorageService()
       const service = new StorageContext(
         mockSynapse,
         mockWarmStorageService,
@@ -2032,7 +1917,7 @@ describe('StorageService', () => {
     })
 
     it('should enforce 200 MiB size limit', async () => {
-      const mockWarmStorageService = {} as any
+      const mockWarmStorageService = createMockWarmStorageService()
       const service = new StorageContext(
         mockSynapse,
         mockWarmStorageService,
@@ -2334,7 +2219,7 @@ describe('StorageService', () => {
 
     it.skip('should handle piece parking timeout', async () => {
       // Skip this test as it's timing-sensitive and causes issues in CI
-      const mockWarmStorageService = {} as any
+      const mockWarmStorageService = createMockWarmStorageService()
       const service = new StorageContext(
         mockSynapse,
         mockWarmStorageService,
@@ -2912,7 +2797,7 @@ describe('StorageService', () => {
           return expectedProviderInfo
         },
       } as any
-      const mockWarmStorageService = {} as any
+      const mockWarmStorageService = createMockWarmStorageService()
       const service = new StorageContext(
         mockSynapseWithProvider,
         mockWarmStorageService,
@@ -2936,7 +2821,7 @@ describe('StorageService', () => {
         },
         getServiceProviderRegistryAddress: () => '0x0000000000000000000000000000000000000001',
       } as any
-      const mockWarmStorageService = {} as any
+      const mockWarmStorageService = createMockWarmStorageService()
       const service = new StorageContext(
         mockSynapseWithError,
         mockWarmStorageService,
@@ -3493,7 +3378,7 @@ describe('StorageService', () => {
     })
 
     it('should handle invalid PieceCID', async () => {
-      const mockWarmStorageService = {} as any
+      const mockWarmStorageService = createMockWarmStorageService()
       const service = new StorageContext(
         mockSynapse,
         mockWarmStorageService,
