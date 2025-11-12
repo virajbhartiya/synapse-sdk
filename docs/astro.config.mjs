@@ -1,6 +1,7 @@
 import starlight from '@astrojs/starlight'
 import { docsPlugin } from '@hugomrdias/docs/starlight-typedoc'
 import { defineConfig } from 'astro/config'
+import mermaid from 'astro-mermaid'
 import ecTwoSlash from 'expressive-code-twoslash'
 import starlightLlmsTxt from 'starlight-llms-txt'
 import viteTsconfigPaths from 'vite-tsconfig-paths'
@@ -15,6 +16,10 @@ export default defineConfig({
     plugins: [viteTsconfigPaths()],
   },
   integrations: [
+    mermaid({
+      theme: 'forest',
+      autoTheme: true,
+    }),
     starlight({
       title: 'Filecoin Onchain Cloud',
       logo: { src: './src/assets/foc-logo.svg', alt: 'foc' },
@@ -80,15 +85,30 @@ export default defineConfig({
       sidebar: [
         {
           label: 'Introduction',
-          autogenerate: { directory: 'intro' },
+          autogenerate: { directory: 'introduction' },
         },
         {
           label: 'Getting Started',
-          autogenerate: { directory: 'gettingStarted' },
+          autogenerate: { directory: 'getting-started' },
         },
         {
-          label: 'Guides',
-          autogenerate: { directory: 'guides' },
+          label: 'Core Concepts',
+          autogenerate: { directory: 'core-concepts' },
+        },
+        {
+          label: 'Developer Guides',
+          collapsed: false,
+          autogenerate: { directory: 'developer-guides' , collapsed: true},
+        },
+        {
+          label: 'CookBooks',
+          collapsed: true,
+          autogenerate: { directory: 'cookbooks' },
+        },
+        {
+          label: 'Resources',
+          collapsed: true,
+          autogenerate: { directory: 'resources' },
         },
         {
           label: 'API',
