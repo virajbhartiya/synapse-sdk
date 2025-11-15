@@ -73,12 +73,16 @@ export const upload: Command = command(
         onPiecesAdded(transactionHash, pieces) {
           p.log.info(`Pieces added in tx: ${transactionHash}`)
           if (pieces?.length) {
-            p.log.info(`PieceCIDs: ${pieces.map(({ pieceCid }) => pieceCid.toString()).join(', ')}`)
+            p.log.info(
+              `PieceCIDs: ${pieces.map(({ pieceCid }) => pieceCid.toString()).join(', ')}`
+            )
           }
         },
         onPiecesConfirmed(dataSetId, pieces) {
           p.log.info(`Data set ${dataSetId} confirmed`)
-          p.log.info(`Piece IDs: ${pieces.map(({ pieceId }) => pieceId).join(', ')}`)
+          p.log.info(
+            `Piece IDs: ${pieces.map(({ pieceId }) => pieceId).join(', ')}`
+          )
         },
         onUploadComplete(pieceCid) {
           p.log.info(`Upload complete! PieceCID: ${pieceCid}`)
