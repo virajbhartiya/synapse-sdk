@@ -8,6 +8,7 @@ import { fund } from './commands/fund.ts'
 import { init } from './commands/init.ts'
 import { pay } from './commands/pay.ts'
 import { pieces } from './commands/pieces.ts'
+import { providers } from './commands/providers.ts'
 import { upload } from './commands/upload.ts'
 import { uploadDataset } from './commands/upload-dataset.ts'
 
@@ -25,6 +26,7 @@ const argv = cli({
     datasetTerminate,
     pieces,
     uploadDataset,
+    providers,
   ],
 })
 
