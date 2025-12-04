@@ -137,7 +137,7 @@ The SDK intelligently manages data sets to minimize on-chain transactions. The s
 ```ts twoslash
 import {
   PieceCID,
-  PieceIdentifiers,
+  PieceRecord,
   UploadResult,
   ProviderInfo,
   PreflightInfo,
@@ -146,19 +146,6 @@ import {
 import { ethers } from "ethers";
 type Transaction = Promise<ethers.TransactionResponse>;
 type Hex = `0x${string}`;
-/**
- * Callbacks for tracking upload progress
- *
- * These callbacks provide visibility into the upload process stages:
- * 1. Upload completion (piece uploaded to provider)
- * 2. Piece addition (transaction submitted to chain)
- * 3. Confirmation (transaction confirmed on-chain)
- */
-export interface PieceIdentifiers {
-  pieceId: number;
-  pieceCid: PieceCID;
-}
-
 export interface UploadCallbacks {
   /** Called periodically during upload with bytes uploaded so far */
   onProgress?: (bytesUploaded: number) => void;
@@ -169,7 +156,7 @@ export interface UploadCallbacks {
   /** @deprecated Use onPiecesAdded instead */
   onPieceAdded?: (transaction?: Hex) => void;
   /** Called when the service provider agrees that the piece addition(s) are confirmed on-chain */
-  onPiecesConfirmed?: (dataSetId: number, pieces: PieceIdentifiers[]) => void;
+  onPiecesConfirmed?: (dataSetId: number, pieces: PieceRecord[]) => void;
   /** @deprecated Use onPiecesConfirmed instead */
   onPieceConfirmed?: (pieceIds: number[]) => void;
 }

@@ -11,7 +11,7 @@ import { setup } from 'iso-web/msw'
 import { HttpResponse, http } from 'msw'
 import type { Hex } from 'viem'
 import { Synapse } from '../synapse.ts'
-import type { PieceCID, PieceIdentifiers } from '../types.ts'
+import type { PieceCID, PieceRecord } from '../types.ts'
 import { SIZE_CONSTANTS } from '../utils/constants.ts'
 import { JSONRPC, PRIVATE_KEYS, presets } from './mocks/jsonrpc/index.ts'
 import { findAnyPieceHandler, streamingUploadHandlers } from './mocks/pdp/handlers.ts'
@@ -454,7 +454,7 @@ describe('Storage Upload', () => {
     let pieceAddedCallbackFired = false
     let pieceConfirmedCallbackFired = false
     let piecesAddedArgs: { transaction?: Hex; pieces?: Array<{ pieceCid: PieceCID }> } | null = null
-    let piecesConfirmedArgs: { dataSetId?: number; pieces?: PieceIdentifiers[] } | null = null
+    let piecesConfirmedArgs: { dataSetId?: number; pieces?: PieceRecord[] } | null = null
     let uploadCompleteCallbackFired = false
     let resolvedDataSetId: number | undefined
     const txHash = '0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef123456'
@@ -503,7 +503,7 @@ describe('Storage Upload', () => {
       onPiecesAdded(transaction: Hex | undefined, pieces: Array<{ pieceCid: PieceCID }> | undefined) {
         piecesAddedArgs = { transaction, pieces }
       },
-      onPiecesConfirmed(dataSetId: number, pieces: PieceIdentifiers[]) {
+      onPiecesConfirmed(dataSetId: number, pieces: PieceRecord[]) {
         piecesConfirmedArgs = { dataSetId, pieces }
       },
       onPieceAdded() {
@@ -526,7 +526,7 @@ describe('Storage Upload', () => {
       throw new Error('Callbacks should have been called')
     }
     const addedArgs: { transaction?: Hex; pieces?: Array<{ pieceCid: PieceCID }> } = piecesAddedArgs
-    const confirmedArgs: { dataSetId?: number; pieces?: PieceIdentifiers[] } = piecesConfirmedArgs
+    const confirmedArgs: { dataSetId?: number; pieces?: PieceRecord[] } = piecesConfirmedArgs
     assert.strictEqual(addedArgs.transaction, txHash, 'onPiecesAdded should receive transaction hash')
     assert.strictEqual(
       addedArgs.pieces?.[0].pieceCid.toString(),
