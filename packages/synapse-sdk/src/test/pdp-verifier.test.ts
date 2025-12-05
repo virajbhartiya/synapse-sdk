@@ -11,7 +11,7 @@ import { setup } from 'iso-web/msw'
 import { PDPVerifier } from '../pdp/index.ts'
 import { ADDRESSES, JSONRPC, presets } from './mocks/jsonrpc/index.ts'
 
-const server = setup([])
+const server = setup()
 
 describe('PDPVerifier', () => {
   let provider: ethers.Provider
@@ -19,7 +19,7 @@ describe('PDPVerifier', () => {
   const testAddress = ADDRESSES.calibration.pdpVerifier
 
   before(async () => {
-    await server.start({ quiet: true })
+    await server.start()
   })
 
   after(() => {
@@ -205,6 +205,43 @@ describe('PDPVerifier', () => {
     it('should return the contract address', () => {
       const address = pdpVerifier.getContractAddress()
       assert.equal(address, testAddress)
+    })
+  })
+
+  describe('getScheduledRemovals', () => {
+    it('should get scheduled removals for a data set', async () => {
+      server.use(
+        JSONRPC({
+          ...presets.basic,
+          pdpVerifier: {
+            ...presets.basic.pdpVerifier,
+            getScheduledRemovals: () => [[1n, 2n, 5n]],
+          },
+        })
+      )
+
+      const scheduledRemovals = await pdpVerifier.getScheduledRemovals(123)
+      assert.isArray(scheduledRemovals)
+      assert.equal(scheduledRemovals.length, 3)
+      assert.equal(scheduledRemovals[0], 1)
+      assert.equal(scheduledRemovals[1], 2)
+      assert.equal(scheduledRemovals[2], 5)
+    })
+
+    it('should return empty array when no removals scheduled', async () => {
+      server.use(
+        JSONRPC({
+          ...presets.basic,
+          pdpVerifier: {
+            ...presets.basic.pdpVerifier,
+            getScheduledRemovals: () => [[]],
+          },
+        })
+      )
+
+      const scheduledRemovals = await pdpVerifier.getScheduledRemovals(123)
+      assert.isArray(scheduledRemovals)
+      assert.equal(scheduledRemovals.length, 0)
     })
   })
 })

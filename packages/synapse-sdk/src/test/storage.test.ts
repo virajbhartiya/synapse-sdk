@@ -25,7 +25,7 @@ import {
 import { PING } from './mocks/ping.ts'
 
 // MSW server for JSONRPC mocking
-const server = setup([])
+const server = setup()
 
 function cidBytesToContractHex(bytes: Uint8Array): `0x${string}` {
   return ethers.hexlify(bytes) as `0x${string}`
@@ -42,7 +42,7 @@ describe('StorageService', () => {
   before(async () => {
     // Set timeout to 100ms for testing
     SP.setTimeout(100)
-    await server.start({ quiet: true })
+    await server.start()
   })
 
   after(() => {
@@ -630,7 +630,7 @@ describe('StorageService', () => {
         })
         assert.fail('Should have thrown error')
       } catch (error: any) {
-        assert.include(error.message, 'Data set 999 not found')
+        assert.include(error.message, 'Data set 999 does not exist')
       }
     })
 
@@ -827,6 +827,7 @@ describe('StorageService', () => {
           ...presets.basic,
           pdpVerifier: {
             dataSetLive: () => [false],
+            getDataSetListener: () => [ADDRESSES.calibration.warmStorage],
           },
           warmStorageView: {
             ...presets.basic.warmStorageView,
@@ -861,7 +862,7 @@ describe('StorageService', () => {
         })
         assert.fail('Should have thrown error')
       } catch (error: any) {
-        assert.include(error.message, 'Data set 1 not found')
+        assert.include(error.message, 'Data set 1 does not exist or is not live')
       }
     })
 
