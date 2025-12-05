@@ -172,7 +172,7 @@ type UploadOptions = {
   metadata?: Record<string, string>;
   onUploadComplete?: (pieceCid: PieceCID) => void;
   onPiecesAdded?: (transaction?: Hex, pieces?: { pieceCid: PieceCID }[]) => void;
-  onPiecesConfirmed?: (dataSetId: number, pieces: PieceIdentifiers[]) => void;
+  onPiecesConfirmed?: (dataSetId: number, pieces: PieceRecord[]) => void;
 };
 // ---cut---
 interface StorageContextAPI {
