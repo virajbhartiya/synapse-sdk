@@ -35,8 +35,8 @@ import type { ProviderInfo } from '../sp-registry/types.ts'
 import type { Synapse } from '../synapse.ts'
 import type {
   CreateContextsOptions,
+  DataSetInfo,
   DownloadOptions,
-  EnhancedDataSetInfo,
   MetadataEntry,
   PieceCID,
   PieceStatus,
@@ -391,46 +391,41 @@ export class StorageContext {
     signerAddress: string,
     options: StorageServiceOptions
   ): Promise<ProviderSelectionResult> {
-    // Fetch data sets to find the specific one
-    const dataSets = await warmStorageService.getClientDataSetsWithDetails(signerAddress)
-    const dataSet = dataSets.find((ds) => ds.pdpVerifierDataSetId === dataSetId)
+    const [dataSetInfo, dataSetMetadata] = await Promise.all([
+      warmStorageService.getDataSet(dataSetId).then(async (dataSetInfo) => {
+        await StorageContext.validateDataSetConsistency(dataSetInfo, options, spRegistry)
+        return dataSetInfo
+      }),
+      warmStorageService.getDataSetMetadata(dataSetId),
+      warmStorageService.validateDataSet(dataSetId),
+    ])
 
-    if (dataSet == null || !dataSet.isLive || !dataSet.isManaged) {
+    if (dataSetInfo.payer.toLowerCase() !== signerAddress.toLowerCase()) {
       throw createError(
         'StorageContext',
         'resolveByDataSetId',
-        `Data set ${dataSetId} not found, not owned by ${signerAddress}, ` +
-          'or not managed by the current WarmStorage contract'
+        `Data set ${dataSetId} is not owned by ${signerAddress} (owned by ${dataSetInfo.payer})`
       )
     }
 
-    // Validate consistency with other parameters if provided
-    if (options.providerId != null || options.providerAddress != null) {
-      await StorageContext.validateDataSetConsistency(dataSet, options, spRegistry)
-    }
-
-    // Look up provider by ID from the data set
-    const provider = await spRegistry.getProvider(dataSet.providerId)
+    const provider = await spRegistry.getProvider(dataSetInfo.providerId)
     if (provider == null) {
       throw createError(
         'StorageContext',
         'resolveByDataSetId',
-        `Provider ID ${dataSet.providerId} for data set ${dataSetId} not found in registry`
+        `Provider ID ${dataSetInfo.providerId} for data set ${dataSetId} not found in registry`
       )
     }
 
-    // Validate CDN settings match if specified
-    if (options.withCDN != null && dataSet.withCDN !== options.withCDN) {
+    const withCDN = dataSetInfo.cdnRailId > 0
+    if (options.withCDN != null && withCDN !== options.withCDN) {
       throw createError(
         'StorageContext',
         'resolveByDataSetId',
-        `Data set ${dataSetId} has CDN ${dataSet.withCDN ? 'enabled' : 'disabled'}, ` +
+        `Data set ${dataSetId} has CDN ${withCDN ? 'enabled' : 'disabled'}, ` +
           `but requested ${options.withCDN ? 'enabled' : 'disabled'}`
       )
     }
-
-    // Backfill data set metadata from chain
-    const dataSetMetadata = await warmStorageService.getDataSetMetadata(dataSetId)
 
     return {
       provider,
@@ -444,7 +439,7 @@ export class StorageContext {
    * Validate data set consistency with provided options
    */
   private static async validateDataSetConsistency(
-    dataSet: EnhancedDataSetInfo,
+    dataSet: DataSetInfo,
     options: StorageServiceOptions,
     spRegistry: SPRegistryService
   ): Promise<void> {
@@ -454,8 +449,7 @@ export class StorageContext {
         throw createError(
           'StorageContext',
           'validateDataSetConsistency',
-          `Data set ${dataSet.pdpVerifierDataSetId} belongs to provider ID ${dataSet.providerId}, ` +
-            `but provider ID ${options.providerId} was requested`
+          `Data set belongs to provider ID ${dataSet.providerId}, but provider ID ${options.providerId} was requested`
         )
       }
     }
@@ -471,8 +465,7 @@ export class StorageContext {
         throw createError(
           'StorageContext',
           'validateDataSetConsistency',
-          `Data set ${dataSet.pdpVerifierDataSetId} belongs to provider ${actualProvider?.serviceProvider ?? 'unknown'}, ` +
-            `but provider ${options.providerAddress} was requested`
+          `Data set belongs to provider ${actualProvider?.serviceProvider ?? 'unknown'}, but provider ${options.providerAddress} was requested`
         )
       }
     }
